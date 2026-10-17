@@ -187,10 +187,13 @@ function applyAppearance(display) {
   // The colors are "#rrggbb" or "#rrggbbaa"; CSS reads both forms, so the alpha needs no conversion.
   display.style.setProperty("--tha-display-background", getColorSetting(SETTINGS.BACKGROUND_COLOR));
 
-  const border = getSetting(SETTINGS.SHOW_BORDER)
+  // Without a border, the display has no frame at all: no padding and no shadow, so only the image shows.
+  const showBorder = getSetting(SETTINGS.SHOW_BORDER);
+  const border = showBorder
     ? `${getSetting(SETTINGS.BORDER_WIDTH)}px solid ${getColorSetting(SETTINGS.BORDER_COLOR)}`
     : "none";
   display.style.setProperty("--tha-display-border", border);
+  display.classList.toggle("frameless", !showBorder);
 }
 
 /**

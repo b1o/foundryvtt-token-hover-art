@@ -160,8 +160,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  --tha-padding: 4px;
   max-width: 40vw;
-  padding: 4px;
+  padding: var(--tha-padding);
   /* hover-display.mjs sets these two variables from the module settings. */
   background: var(--tha-display-background, rgba(0, 0, 0, 0.6));
   border: var(--tha-display-border, 1px solid var(--tha-border-dark));
@@ -177,6 +178,13 @@
   opacity: 1;
   visibility: visible;
   transition: opacity 150ms ease-in-out, visibility 0s;
+}
+
+/* "Show border" is off: no frame at all, so only the image shows. */
+#token-hover-art-display.frameless {
+  --tha-padding: 0px;
+  border-radius: 4px;
+  box-shadow: none;
 }
 
 /* Move mode (Ctrl held): the display takes pointer input so the user can drag it. */
@@ -197,21 +205,21 @@
 #token-hover-art-display .tha-media img,
 #token-hover-art-display .tha-media video {
   display: block;
-  max-width: calc(40vw - 8px);
+  max-width: calc(40vw - (2 * var(--tha-padding)));
   max-height: var(--tha-max-height);
   object-fit: contain;
   border: none;
   border-radius: 4px;
 }
 
-/* The name lies on the bottom edge of the image. The insets match the 4px padding of the display, so the band
+/* The name lies on the bottom edge of the image. The insets match the padding of the display, so the band
    covers the image edge to edge. The gradient darkens only the bottom of the image, so light text stays
    readable on light and dark images. */
 #token-hover-art-display .tha-caption {
   position: absolute;
-  left: 4px;
-  right: 4px;
-  bottom: 4px;
+  left: var(--tha-padding);
+  right: var(--tha-padding);
+  bottom: var(--tha-padding);
   padding: 18px 8px 6px;
   border-radius: 0 0 4px 4px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.35) 60%, rgba(0, 0, 0, 0));
