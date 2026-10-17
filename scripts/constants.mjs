@@ -15,7 +15,6 @@ export const SETTINGS = Object.freeze({
   POSITION: "position",
   MAX_HEIGHT: "maxHeight",
   BACKGROUND_COLOR: "backgroundColor",
-  BACKGROUND_OPACITY: "backgroundOpacity",
   SHOW_BORDER: "showBorder",
   BORDER_WIDTH: "borderWidth",
   BORDER_COLOR: "borderColor",
@@ -23,6 +22,7 @@ export const SETTINGS = Object.freeze({
   DEFAULT_FILTER: "defaultFilter",
   SHOW_NAME: "showName",
   ENABLED: "enabled",
+  OWNERS_MANAGE_GALLERY: "ownersManageGallery",
   PALETTE_SIZE: "paletteSize",
   USE_CUSTOM_POSITION: "useCustomPosition",
   CUSTOM_POSITION: "customPosition"

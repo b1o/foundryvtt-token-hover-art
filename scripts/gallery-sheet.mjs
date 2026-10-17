@@ -1,8 +1,8 @@
 import { MODULE_ID, SETTINGS, TEMPLATES } from "./constants.mjs";
 import { getSetting } from "./settings.mjs";
 import {
-  getBaseActor, getManualImages, setManualImages, getFolderSources, getDefaultArt, setDefaultArt, clearDefaultArt,
-  isDefaultSecret, setDefaultSecret, isVideo
+  getBaseActor, canManageGallery, getManualImages, setManualImages, getFolderSources, getDefaultArt, setDefaultArt,
+  clearDefaultArt, isDefaultSecret, setDefaultSecret, isVideo
 } from "./hover-art-data.mjs";
 import {
   canScanFolders, addFolderSource, setFolderFilter, removeFolderSource, rescanFolderSources
@@ -42,14 +42,23 @@ export class HoverArtGallery extends getDocumentSheetClass() {
    * @returns {HoverArtGallery|null}
    */
   static open(actor) {
+    if ( !canManageGallery(actor) ) return null;
     const baseActor = getBaseActor(actor);
-    if ( !baseActor ) return null;
     const app = Object.values(baseActor.apps).find(a => a instanceof HoverArtGallery) ?? new HoverArtGallery(baseActor);
     app.render(true, {focus: true});
-    if ( baseActor.isOwner && canScanFolders() ) {
+    if ( canScanFolders() ) {
       rescanFolderSources(baseActor).catch(err => console.warn("token-hover-art | Folder rescan failed", err));
     }
     return app;
+  }
+
+  /**
+   * Only users who may manage the gallery can view this window (see canManageGallery). The core check of the
+   * viewPermission option (OWNER) runs first.
+   * @override
+   */
+  _canUserView(user) {
+    return super._canUserView(user) && canManageGallery(this.document);
   }
 
   /** @override */

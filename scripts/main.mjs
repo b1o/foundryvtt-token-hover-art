@@ -1,6 +1,7 @@
 import { TEMPLATES } from "./constants.mjs";
-import { registerSettings, addColorPickers } from "./settings.mjs";
-import { getBaseActor, hasModuleFlagChange } from "./hover-art-data.mjs";
+import { registerSettings } from "./settings.mjs";
+import { addColorFields } from "./color-fields.mjs";
+import { getBaseActor, canManageGallery, hasModuleFlagChange } from "./hover-art-data.mjs";
 import { HoverArtGallery } from "./gallery-sheet.mjs";
 import { loadPaletteTemplate, onRenderTokenHUD, refreshTokenHUD } from "./token-hud.mjs";
 import {
@@ -15,7 +16,7 @@ Hooks.once("init", () => {
   activateMoveKey();
 });
 
-Hooks.on("renderSettingsConfig", addColorPickers);
+Hooks.on("renderSettingsConfig", addColorFields);
 
 /* -------------------------------------------- */
 /*  Actor sheet button                          */
@@ -23,18 +24,16 @@ Hooks.on("renderSettingsConfig", addColorPickers);
 
 /**
  * @param {Actor} sheetActor  The Actor of an actor sheet.
- * @returns {Actor|null}      The base Actor, if the current user may open its gallery.
+ * @returns {Actor|null}      The base Actor, if the current user may manage its gallery.
  */
 function getGalleryActor(sheetActor) {
-  const actor = getBaseActor(sheetActor);
-  if ( !actor || actor.pack || !actor.isOwner ) return null;
-  return actor;
+  return canManageGallery(sheetActor) ? getBaseActor(sheetActor) : null;
 }
 
 /**
  * Add a "Hover Art" button to the header of Application V1 actor sheets (all sheets in v11 and v12, and the V1
- * sheets that some systems still use in v13). Only owners and GMs see it. For an unlinked token, it opens the
- * gallery of the base Actor.
+ * sheets that some systems still use in v13). Only users who may manage the gallery see it (see
+ * canManageGallery). For an unlinked token, it opens the gallery of the base Actor.
  */
 Hooks.on("getActorSheetHeaderButtons", (sheet, buttons) => {
   const actor = getGalleryActor(sheet.actor);

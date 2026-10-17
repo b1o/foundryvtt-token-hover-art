@@ -10,9 +10,11 @@
         <i class="fas {{#if secret}}fa-eye-slash{{else}}fa-eye{{/if}}"></i>
       </a>
       {{/if}}
+      {{#if canManage}}
       <a class="tha-palette-button" data-tha-action="manage" data-tooltip="TOKEN_HOVER_ART.HUD.Manage">
         <i class="fas fa-cog"></i>
       </a>
+      {{/if}}
     </header>
     <div class="tha-palette-grid">
       <div class="tha-choice tha-choice-none {{#unless hasSelection}}active{{/unless}}" data-tha-action="clear"

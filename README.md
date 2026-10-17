@@ -56,7 +56,7 @@ The gallery is the manual images plus the files of all folders, without duplicat
 ## Permissions
 
 - The Token HUD shows only to GMs and to owners of the actor (core rule). So only they can select hover art.
-- The gallery window opens only for owners and GMs.
+- The gallery window opens only for GMs and, if **Allow owners to manage galleries** is on, for owners. When it is off, owners can still select hover art from the gallery, but they cannot change the gallery. The setting controls the user interface; it is not a server rule, so a user with console access could still write the gallery data.
 - To browse files or to add folders, a user needs the core permission **Use File Browser** (default: Trusted Player). To upload files, a user needs **Upload New Files** (default: Assistant GM). Set these in **Configure Permissions**.
 
 ## Compatibility
@@ -85,11 +85,11 @@ The release workflow then checks that the tag matches `module.json`, builds `mod
 |---|---|---|
 | Display position (screen corner) | World | Top right |
 | Maximum height (% of screen) | World | 40 |
-| Background color | World | `#000000` |
-| Background opacity (%) | World | 60 |
+| Background color | World | `#00000099` (black, 60% opacity) |
 | Show border | World | On |
 | Border width (px) | World | 1 |
-| Border color | World | `#333333` |
+| Border color | World | `#333333ff` |
+| Allow owners to manage galleries | World (reloads all clients) | On |
 | Hide delay (ms) | World | 250 |
 | Default folder filter | World | `*.png` |
 | Show token name | World | Off |
@@ -98,4 +98,4 @@ The release workflow then checks that the tag matches `module.json`, builds `mod
 | Dragged position | Client (hidden, set with Ctrl-drag) | None |
 | Palette size | Client (hidden, set with the resize grip) | 228 × 290 px |
 
-The color settings are text fields with a color picker next to them. They accept colors in the form `#rrggbb`. An invalid value falls back to the default.
+The color settings accept `#rrggbb` or `#rrggbbaa`; the last two digits are the opacity. In the settings window, each color has a color picker and an opacity slider next to the text field. An invalid value falls back to the default.

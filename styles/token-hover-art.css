@@ -212,10 +212,10 @@
 }
 
 /* ---------------------------------------- */
-/* Settings window: color pickers           */
+/* Settings window: color fields            */
 /* ---------------------------------------- */
-/* settings.mjs adds a color picker next to the text field of each color setting. The selector is specific
-   enough to win over the core rules for inputs in settings fields. */
+/* color-fields.mjs adds a color picker and an alpha slider next to the text field of each color setting.
+   The selectors are specific enough to win over the core rules for inputs in settings fields. */
 .form-group .form-fields input.tha-color-picker {
   flex: 0 0 32px;
   width: 32px;
@@ -224,6 +224,16 @@
   border: none;
   background: none;
   cursor: pointer;
+}
+
+.form-group .form-fields input.tha-alpha-slider {
+  flex: 0 0 80px;
+  width: 80px;
+}
+
+.form-group .form-fields .tha-alpha-value {
+  flex: 0 0 36px;
+  text-align: right;
 }
 
 /* ---------------------------------------- */

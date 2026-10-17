@@ -1,7 +1,7 @@
 import { MODULE_ID, SETTINGS, TEMPLATES } from "./constants.mjs";
 import { getSetting } from "./settings.mjs";
 import {
-  getBaseActor, getGallery, getSelectedArt, selectArt, clearArt, isSecret, setSecret, isVideo
+  getBaseActor, canManageGallery, getGallery, getSelectedArt, selectArt, clearArt, isSecret, setSecret, isVideo
 } from "./hover-art-data.mjs";
 import { HoverArtGallery } from "./gallery-sheet.mjs";
 import { getCompiledTemplate, getHookElement } from "./compat.mjs";
@@ -67,6 +67,7 @@ export function onRenderTokenHUD(hud, html) {
   const markup = paletteTemplate({
     open: paletteToken === token,
     isGM: game.user.isGM,
+    canManage: canManageGallery(actor),
     secret: isSecret(tokenDoc),
     hasSelection: !!selected,
     size: getSetting(SETTINGS.PALETTE_SIZE),

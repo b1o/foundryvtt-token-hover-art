@@ -184,9 +184,8 @@ function showDisplay(token, path) {
 function applyAppearance(display) {
   display.style.setProperty("--tha-max-height", `${getSetting(SETTINGS.MAX_HEIGHT)}vh`);
 
-  // An 8-digit hex color "#rrggbbaa" carries the opacity, so the color picker value needs no conversion.
-  const alpha = Math.round(getSetting(SETTINGS.BACKGROUND_OPACITY) * 2.55).toString(16).padStart(2, "0");
-  display.style.setProperty("--tha-display-background", `${getColorSetting(SETTINGS.BACKGROUND_COLOR)}${alpha}`);
+  // The colors are "#rrggbb" or "#rrggbbaa"; CSS reads both forms, so the alpha needs no conversion.
+  display.style.setProperty("--tha-display-background", getColorSetting(SETTINGS.BACKGROUND_COLOR));
 
   const border = getSetting(SETTINGS.SHOW_BORDER)
     ? `${getSetting(SETTINGS.BORDER_WIDTH)}px solid ${getColorSetting(SETTINGS.BORDER_COLOR)}`

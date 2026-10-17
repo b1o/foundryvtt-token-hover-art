@@ -1,4 +1,5 @@
-import { MODULE_ID, FLAGS } from "./constants.mjs";
+import { MODULE_ID, FLAGS, SETTINGS } from "./constants.mjs";
+import { getSetting } from "./settings.mjs";
 import { hasVideoExtension } from "./compat.mjs";
 
 /*
@@ -28,6 +29,21 @@ export function getBaseActor(actor) {
 /* -------------------------------------------- */
 /*  Gallery                                     */
 /* -------------------------------------------- */
+
+/**
+ * Can the current user manage the gallery of this Actor (open the gallery window, add and remove images and
+ * folders, set defaults)? GMs always can. Owners can if the world setting "Allow owners to manage galleries"
+ * is on. Compendium Actors have no gallery. Selecting the hover art of a token is a separate right: the Token HUD
+ * already limits it to GMs and owners.
+ * @param {Actor|null} actor  A base or a synthetic Actor.
+ * @returns {boolean}
+ */
+export function canManageGallery(actor) {
+  const baseActor = getBaseActor(actor);
+  if ( !baseActor || baseActor.pack ) return false;
+  if ( game.user.isGM ) return true;
+  return baseActor.isOwner && getSetting(SETTINGS.OWNERS_MANAGE_GALLERY);
+}
 
 /**
  * @typedef {object} FolderSource
