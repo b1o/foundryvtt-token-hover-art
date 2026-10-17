@@ -1,0 +1,91 @@
+# Token Hover Art (Foundry VTT v11)
+
+Give each actor a gallery of hover art. Select one image for each token. When a user hovers the token, the full image shows in a screen corner at once. When the pointer leaves the token, the image hides after a short delay.
+
+## Install
+
+In the Foundry setup screen, open **Add-on Modules → Install Module**, paste this manifest URL, and click **Install**:
+
+```
+https://github.com/b1o/foundryvtt-token-hover-art/releases/latest/download/module.json
+```
+
+Then enable **Token Hover Art** in your world under **Game Settings → Manage Modules**.
+
+## Use
+
+1. Open an actor sheet and click **Hover Art** in the sheet header.
+2. Add images to the gallery in one of two ways:
+   - **Images:** add one image at a time with the file browser, or type a path.
+   - **Folders:** add a folder and a file name filter. All matching images in that folder join the gallery.
+3. Optional: click the star to make an image the default for new tokens of this actor.
+4. Right-click a token. Click the **images** icon in the left column of the Token HUD. Then select an image, or select the "no hover art" tile. Drag the grip in the bottom-left corner of the palette to resize it; each user keeps their own size.
+5. GMs can click the eye icon in the palette to make the hover art secret. Only GMs and owners see secret hover art.
+
+## Folder filters
+
+The filter uses the core wildcard browse, the same mechanism as "Randomize Wildcard Images" on tokens. The server lists the folder and matches each file name with a glob pattern (minimatch).
+
+| Filter | Matches |
+|---|---|
+| `*.png` | All PNG files (the default) |
+| `{*.png,*.webp}` | PNG and WebP files |
+| `hero-*.webp` | WebP files whose name starts with `hero-` |
+| `*` | All image and video files |
+
+- The filter applies to file names only. Subfolders are not included.
+- The match is case-sensitive: `*.png` does not match `PORTRAIT.PNG`.
+- Only image and video files are included, whatever the filter.
+- Change the default filter in the module settings. Change the filter of one folder in its row in the gallery.
+
+A folder scan needs the core permission **Use File Browser**. So the scan result is stored on the actor, and players read the stored list. The gallery scans its folders again each time a user with that permission opens it. To scan at once, click the scan icon next to **Folders**.
+
+## Data
+
+| Data | Stored in | Shared by |
+|---|---|---|
+| Manual images | `flags.token-hover-art.images` on the world Actor | All tokens of the actor |
+| Folders | `flags.token-hover-art.folders` on the world Actor: `{source, bucket, folder, filter, files}` | All tokens of the actor |
+| Selected art | `flags.token-hover-art.selected` on the TokenDocument | One token |
+| Secret state | `flags.token-hover-art.secret` on the TokenDocument | One token |
+| Defaults | The same two flags on `Actor#prototypeToken` | New tokens |
+
+The gallery is the manual images plus the files of all folders, without duplicates. An unlinked token has a synthetic Actor. The module always writes to the base Actor, so all tokens of the actor share one gallery.
+
+## Permissions
+
+- The Token HUD shows only to GMs and to owners of the actor (core rule). So only they can select hover art.
+- The gallery window opens only for owners and GMs.
+- To browse files or to add folders, a user needs the core permission **Use File Browser** (default: Trusted Player). To upload files, a user needs **Upload New Files** (default: Assistant GM). Set these in **Configure Permissions**.
+
+## Compatibility
+
+The module supports Foundry VTT v11 and later. `scripts/compat.mjs` holds every core API that moved between versions. Each lookup tries the new namespaced location first and falls back to the v11/v12 global, so v13 logs no deprecation warnings for these APIs.
+
+| Version | Status |
+|---|---|
+| v11 (11.314) | Tested |
+| v12 | Not tested yet. All used APIs exist in the installed v12 source. |
+| v13 | Not tested yet. The API locations come from the v13 API documentation. Not confirmed there: the Token HUD markup (`.col.left`) and the ids of the scene navigation and the scene controls. |
+
+Known future change: the gallery window uses Application V1, because ApplicationV2 does not exist in v11. Application V1 is deprecated since v13. When a later core version removes it, the gallery window must move to ApplicationV2.
+
+## Release a new version
+
+1. In `module.json`, set `version` (for example `0.4.0`), and set `download` to the same tag: `.../releases/download/v0.4.0/module.zip`.
+2. Commit and push the change.
+3. On GitHub, publish a release with the tag `v0.4.0`.
+
+The release workflow then checks that the tag matches `module.json`, builds `module.zip`, and attaches `module.json` and `module.zip` to the release. The manifest URL always points to the latest release, so installed copies see the update.
+
+## Settings
+
+| Setting | Scope | Default |
+|---|---|---|
+| Display position | World | Top right |
+| Maximum height (% of screen) | World | 40 |
+| Hide delay (ms) | World | 250 |
+| Default folder filter | World | `*.png` |
+| Show token name | World | Off |
+| Show hover art | Client | On |
+| Palette size | Client (hidden, set with the resize grip) | 228 × 290 px |
