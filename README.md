@@ -1,6 +1,6 @@
-# Token Hover Art (Foundry VTT v11)
+# Token Hover Art (Foundry VTT v11 and later)
 
-Give each actor a gallery of hover art. Select one image for each token. When a user hovers the token, the full image shows in a screen corner at once. When the pointer leaves the token, the image hides after a short delay.
+Give each actor a gallery of hover art. Select one image for each token. When a user hovers the token, the full image shows in a screen corner at once. When the pointer leaves the token, the image hides after a short delay. Each user can drag the image to an own position.
 
 ## Install
 
@@ -21,6 +21,7 @@ Then enable **Token Hover Art** in your world under **Game Settings → Manage M
 3. Optional: click the star to make an image the default for new tokens of this actor.
 4. Right-click a token. Click the **images** icon in the left column of the Token HUD. Then select an image, or select the "no hover art" tile. Drag the grip in the bottom-left corner of the palette to resize it; each user keeps their own size.
 5. GMs can click the eye icon in the palette to make the hover art secret. Only GMs and owners see secret hover art.
+6. To move the hover art: hover a token so the image shows, then hold **Ctrl**. The image gets a dashed outline and stays open. Drag it to a new place and release. The position applies only to you. To go back to the corner, turn off **Use my dragged position** in the module settings.
 
 ## Folder filters
 
@@ -66,7 +67,7 @@ The module supports Foundry VTT v11 and later. `scripts/compat.mjs` holds every 
 |---|---|
 | v11 (11.314) | Tested |
 | v12 | Not tested yet. All used APIs exist in the installed v12 source. |
-| v13 | Not tested yet. The API locations come from the v13 API documentation. Not confirmed there: the Token HUD markup (`.col.left`) and the ids of the scene navigation and the scene controls. |
+| v13 | Not tested yet. The API locations come from the v13 API documentation. Not confirmed there: the Token HUD markup (`.col.left`) and the text field markup of the settings window (used for the color pickers; without them, the color settings are plain text fields). |
 
 Known future change: the gallery window uses Application V1, because ApplicationV2 does not exist in v11. Application V1 is deprecated since v13. When a later core version removes it, the gallery window must move to ApplicationV2.
 
@@ -82,10 +83,19 @@ The release workflow then checks that the tag matches `module.json`, builds `mod
 
 | Setting | Scope | Default |
 |---|---|---|
-| Display position | World | Top right |
+| Display position (screen corner) | World | Top right |
 | Maximum height (% of screen) | World | 40 |
+| Background color | World | `#000000` |
+| Background opacity (%) | World | 60 |
+| Show border | World | On |
+| Border width (px) | World | 1 |
+| Border color | World | `#333333` |
 | Hide delay (ms) | World | 250 |
 | Default folder filter | World | `*.png` |
 | Show token name | World | Off |
 | Show hover art | Client | On |
+| Use my dragged position | Client (turned on by a Ctrl-drag) | Off |
+| Dragged position | Client (hidden, set with Ctrl-drag) | None |
 | Palette size | Client (hidden, set with the resize grip) | 228 × 290 px |
+
+The color settings are text fields with a color picker next to them. They accept colors in the form `#rrggbb`. An invalid value falls back to the default.

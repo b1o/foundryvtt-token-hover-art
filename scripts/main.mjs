@@ -1,10 +1,10 @@
 import { TEMPLATES } from "./constants.mjs";
-import { registerSettings } from "./settings.mjs";
+import { registerSettings, addColorPickers } from "./settings.mjs";
 import { getBaseActor, hasModuleFlagChange } from "./hover-art-data.mjs";
 import { HoverArtGallery } from "./gallery-sheet.mjs";
 import { loadPaletteTemplate, onRenderTokenHUD, refreshTokenHUD } from "./token-hud.mjs";
 import {
-  onHoverToken, refreshTokenDisplay, onDeleteToken, preloadSceneArt, refreshDisplay, hideDisplay
+  activateMoveKey, onHoverToken, refreshTokenDisplay, onDeleteToken, preloadSceneArt, refreshDisplay, hideDisplay
 } from "./hover-display.mjs";
 import { preloadTemplates } from "./compat.mjs";
 
@@ -12,7 +12,10 @@ Hooks.once("init", () => {
   registerSettings(refreshDisplay);
   preloadTemplates([TEMPLATES.GALLERY_SHEET]);
   loadPaletteTemplate();
+  activateMoveKey();
 });
+
+Hooks.on("renderSettingsConfig", addColorPickers);
 
 /* -------------------------------------------- */
 /*  Actor sheet button                          */

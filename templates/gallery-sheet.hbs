@@ -13,7 +13,7 @@
         {{else}}
         <img src="{{path}}" alt="" loading="lazy">
         {{/if}}
-        <figcaption title="{{path}}">{{path}}</figcaption>
+        <figcaption>{{path}}</figcaption>
         {{#if ../editable}}
         <nav class="tha-gallery-controls">
           <a data-action="default" data-tooltip="TOKEN_HOVER_ART.Gallery.Default">
@@ -50,7 +50,7 @@
     <section class="tha-folder" data-index="{{index}}">
       <header class="tha-folder-header">
         <i class="fas fa-folder-open"></i>
-        <span class="tha-folder-path" title="{{source}}: {{folder}}">{{folder}}</span>
+        <span class="tha-folder-path">{{folder}}</span>
         {{#if ../canScan}}
         <input type="text" class="tha-folder-filter" value="{{filter}}" data-tooltip="TOKEN_HOVER_ART.Folders.FilterTooltip">
         <a data-action="remove-folder" data-tooltip="TOKEN_HOVER_ART.Folders.Remove"><i class="fas fa-trash"></i></a>
@@ -68,7 +68,7 @@
           {{else}}
           <img src="{{path}}" alt="" loading="lazy">
           {{/if}}
-          <figcaption title="{{path}}">{{path}}</figcaption>
+          <figcaption>{{path}}</figcaption>
           {{#if ../../editable}}
           <nav class="tha-gallery-controls">
             <a data-action="default" data-tooltip="TOKEN_HOVER_ART.Gallery.Default">

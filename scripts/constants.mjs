@@ -14,11 +14,18 @@ export const FLAGS = Object.freeze({
 export const SETTINGS = Object.freeze({
   POSITION: "position",
   MAX_HEIGHT: "maxHeight",
+  BACKGROUND_COLOR: "backgroundColor",
+  BACKGROUND_OPACITY: "backgroundOpacity",
+  SHOW_BORDER: "showBorder",
+  BORDER_WIDTH: "borderWidth",
+  BORDER_COLOR: "borderColor",
   HIDE_DELAY: "hideDelay",
   DEFAULT_FILTER: "defaultFilter",
   SHOW_NAME: "showName",
   ENABLED: "enabled",
-  PALETTE_SIZE: "paletteSize"
+  PALETTE_SIZE: "paletteSize",
+  USE_CUSTOM_POSITION: "useCustomPosition",
+  CUSTOM_POSITION: "customPosition"
 });
 
 export const POSITIONS = Object.freeze({

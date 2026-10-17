@@ -20,7 +20,7 @@
         <i class="fas fa-ban"></i>
       </div>
       {{#each images}}
-      <div class="tha-choice {{#if active}}active{{/if}}" data-tha-action="select" data-path="{{path}}" title="{{path}}">
+      <div class="tha-choice {{#if active}}active{{/if}}" data-tha-action="select" data-path="{{path}}">
         {{#if isVideo}}
         <video src="{{path}}" muted loop autoplay playsinline></video>
         {{else}}

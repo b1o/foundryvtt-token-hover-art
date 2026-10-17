@@ -1,28 +1,20 @@
-import { SETTINGS, POSITIONS } from "./constants.mjs";
-import { getSetting } from "./settings.mjs";
+import { SETTINGS } from "./constants.mjs";
+import { getSetting, getColorSetting } from "./settings.mjs";
 import { getSelectedArt, canViewArt, isVideo } from "./hover-art-data.mjs";
+import { applyDisplayPosition, makeDisplayDraggable, isDragging } from "./display-position.mjs";
 
 /*
  * The hover display is local to each client. Foundry fires the hoverToken hook only on the client of the user
  * who moves the mouse, and each client already has the token flags, because Foundry sends every document update
  * to all clients. So the display needs no socket messages.
+ *
+ * Move mode: while the user holds Ctrl, the display stays open and the user can drag it to a new position
+ * (see display-position.mjs). Without move mode, the display would hide when the pointer leaves the token
+ * on its way to the display.
  */
 
-/** Distance in pixels between the display and the core UI elements. */
-const MARGIN = 12;
-
-/**
- * The element ids of the core UI parts that the display must not cover. The first id is the v11/v12 id.
- * The second id is the expected v13 id; the v13 API documentation does not state these ids.
- * A part that is not found gives no offset, so the display can then overlap it, but it still works.
- */
-const UI_ELEMENT_IDS = Object.freeze({
-  navigation: ["navigation", "scene-navigation"],
-  controls: ["controls", "scene-controls"],
-  sidebar: ["sidebar"],
-  players: ["players"],
-  hotbar: ["hotbar"]
-});
+/** The key that turns on move mode while it is held. */
+const MOVE_KEY = "Control";
 
 /** @type {HTMLElement|null} */
 let element = null;
@@ -33,20 +25,38 @@ let shownToken = null;
 /** The timer that hides the display after the hide delay. @type {number|null} */
 let hideTimer = null;
 
+/** Is the move key held now? */
+let moveMode = false;
+
 /** Paths that are already preloaded. @type {Set<string>} */
 const preloaded = new Set();
 
 /* -------------------------------------------- */
 
 /**
+ * Listen for the move key. Call this once, at init.
+ */
+export function activateMoveKey() {
+  window.addEventListener("keydown", event => {
+    if ( event.key === MOVE_KEY ) setMoveMode(true);
+  });
+  window.addEventListener("keyup", event => {
+    if ( event.key === MOVE_KEY ) setMoveMode(false);
+  });
+  // The browser sends no keyup when the window loses focus while the key is held.
+  window.addEventListener("blur", () => setMoveMode(false));
+}
+
+/**
  * Handle the hoverToken hook. The display shows at once when the pointer enters a token.
  * It hides after the hide delay when the pointer leaves, so a short exit does not make it flicker.
+ * In move mode it stays open, so the user can reach it with the pointer.
  * @param {Token} token
  * @param {boolean} hovered
  */
 export function onHoverToken(token, hovered) {
   if ( !hovered ) {
-    if ( shownToken === token ) scheduleHide();
+    if ( (shownToken === token) && !moveMode ) scheduleHide();
     return;
   }
   cancelHide();
@@ -104,11 +114,31 @@ export function hideDisplay() {
   cancelHide();
   shownToken = null;
   if ( !element ) return;
-  element.classList.remove("visible");
+  element.classList.remove("visible", "moving");
   element.querySelector("video")?.pause();
 }
 
 /* -------------------------------------------- */
+
+/**
+ * Turn move mode on or off. When it turns off, the display hides after the hide delay, unless the pointer is
+ * on the shown token again or a drag still runs (the drag end checks again).
+ * @param {boolean} active
+ */
+function setMoveMode(active) {
+  if ( moveMode === active ) return;
+  moveMode = active;
+  element?.classList.toggle("moving", active && !!shownToken);
+  if ( active ) cancelHide();
+  else hideIfNotHovered();
+}
+
+/**
+ * Hide the display after the hide delay if the pointer is not on the shown token and no drag runs.
+ */
+function hideIfNotHovered() {
+  if ( shownToken && !shownToken.hover && !moveMode && !isDragging() ) scheduleHide();
+}
 
 /**
  * @param {Token} token
@@ -139,10 +169,29 @@ function showDisplay(token, path) {
   caption.textContent = showName ? token.document.name : "";
   caption.hidden = !showName;
 
-  applyLayout(display);
+  if ( !isDragging() ) applyDisplayPosition(display);
+  applyAppearance(display);
   shownToken = token;
   display.classList.add("visible");
+  display.classList.toggle("moving", moveMode);
   display.querySelector("video")?.play().catch(() => {});
+}
+
+/**
+ * Apply the size, background, and border settings to the display.
+ * @param {HTMLElement} display
+ */
+function applyAppearance(display) {
+  display.style.setProperty("--tha-max-height", `${getSetting(SETTINGS.MAX_HEIGHT)}vh`);
+
+  // An 8-digit hex color "#rrggbbaa" carries the opacity, so the color picker value needs no conversion.
+  const alpha = Math.round(getSetting(SETTINGS.BACKGROUND_OPACITY) * 2.55).toString(16).padStart(2, "0");
+  display.style.setProperty("--tha-display-background", `${getColorSetting(SETTINGS.BACKGROUND_COLOR)}${alpha}`);
+
+  const border = getSetting(SETTINGS.SHOW_BORDER)
+    ? `${getSetting(SETTINGS.BORDER_WIDTH)}px solid ${getColorSetting(SETTINGS.BORDER_COLOR)}`
+    : "none";
+  display.style.setProperty("--tha-display-border", border);
 }
 
 /**
@@ -178,54 +227,6 @@ function onMediaError(path) {
 }
 
 /**
- * Put the display in the configured corner, next to the core UI elements and not on top of them.
- * @param {HTMLElement} display
- */
-function applyLayout(display) {
-  const position = getSetting(SETTINGS.POSITION);
-  const isTop = [POSITIONS.TOP_LEFT, POSITIONS.TOP_RIGHT].includes(position);
-  const isLeft = [POSITIONS.TOP_LEFT, POSITIONS.BOTTOM_LEFT].includes(position);
-  const insets = getInsets();
-
-  display.style.top = isTop ? `${insets.top}px` : "";
-  display.style.bottom = isTop ? "" : `${isLeft ? insets.bottomLeft : insets.bottomRight}px`;
-  display.style.left = isLeft ? `${insets.left}px` : "";
-  display.style.right = isLeft ? "" : `${insets.right}px`;
-  display.style.setProperty("--tha-max-height", `${getSetting(SETTINGS.MAX_HEIGHT)}vh`);
-}
-
-/**
- * Measure the core UI elements. A hidden element has an empty rectangle, so it gives no offset.
- * A large image in a bottom corner can reach the hotbar, so both bottom corners stay above the hotbar.
- * @returns {{top: number, left: number, right: number, bottomLeft: number, bottomRight: number}}
- */
-function getInsets() {
-  const heightFromBottom = r => (r?.height ? window.innerHeight - r.top : 0);
-  const navigation = getUIRect("navigation");
-  const controls = getUIRect("controls");
-  const sidebar = getUIRect("sidebar");
-  const hotbar = heightFromBottom(getUIRect("hotbar"));
-  return {
-    top: (navigation?.height ? navigation.bottom : 0) + MARGIN,
-    left: (controls?.width ? controls.right : 0) + MARGIN,
-    right: (sidebar?.width ? window.innerWidth - sidebar.left : 0) + MARGIN,
-    bottomLeft: Math.max(heightFromBottom(getUIRect("players")), hotbar) + MARGIN,
-    bottomRight: hotbar + MARGIN
-  };
-}
-
-/**
- * @param {keyof UI_ELEMENT_IDS} part
- * @returns {DOMRect|undefined}  The screen rectangle of the first element of this UI part that exists.
- */
-function getUIRect(part) {
-  for ( const id of UI_ELEMENT_IDS[part] ) {
-    const element = document.getElementById(id);
-    if ( element ) return element.getBoundingClientRect();
-  }
-}
-
-/**
  * @returns {HTMLElement}  The display element. It is created on first use.
  */
 function getElement() {
@@ -234,6 +235,7 @@ function getElement() {
   element.id = "token-hover-art-display";
   element.innerHTML = `<div class="tha-media"></div><div class="tha-caption" hidden></div>`;
   document.body.append(element);
+  makeDisplayDraggable(element, hideIfNotHovered);
   return element;
 }
 

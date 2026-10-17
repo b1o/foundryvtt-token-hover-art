@@ -162,8 +162,9 @@
   align-items: center;
   max-width: 40vw;
   padding: 4px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid var(--tha-border-dark);
+  /* hover-display.mjs sets these two variables from the module settings. */
+  background: var(--tha-display-background, rgba(0, 0, 0, 0.6));
+  border: var(--tha-display-border, 1px solid var(--tha-border-dark));
   border-radius: 6px;
   box-shadow: 0 0 15px var(--tha-shadow);
   pointer-events: none;
@@ -176,6 +177,20 @@
   opacity: 1;
   visibility: visible;
   transition: opacity 150ms ease-in-out, visibility 0s;
+}
+
+/* Move mode (Ctrl held): the display takes pointer input so the user can drag it. */
+#token-hover-art-display.visible.moving {
+  pointer-events: auto;
+  cursor: move;
+  outline: 2px dashed var(--tha-highlight);
+  outline-offset: -2px;
+  user-select: none;
+}
+
+#token-hover-art-display.moving img,
+#token-hover-art-display.moving video {
+  pointer-events: none;
 }
 
 #token-hover-art-display .tha-media img,
@@ -194,6 +209,21 @@
   font-size: var(--font-size-16, 1rem);
   text-align: center;
   text-shadow: 0 0 4px var(--tha-shadow);
+}
+
+/* ---------------------------------------- */
+/* Settings window: color pickers           */
+/* ---------------------------------------- */
+/* settings.mjs adds a color picker next to the text field of each color setting. The selector is specific
+   enough to win over the core rules for inputs in settings fields. */
+.form-group .form-fields input.tha-color-picker {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 26px;
+  padding: 0 2px;
+  border: none;
+  background: none;
+  cursor: pointer;
 }
 
 /* ---------------------------------------- */
