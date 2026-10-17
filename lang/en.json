@@ -1,6 +1,6 @@
 {
   "TOKEN_HOVER_ART.Settings.Position.Name": "Display position",
-  "TOKEN_HOVER_ART.Settings.Position.Hint": "The screen corner where the hover art shows. Each user can drag the hover art to an own position instead (see \"Use my dragged position\").",
+  "TOKEN_HOVER_ART.Settings.Position.Hint": "The screen corner where the hover art shows. Each user can drag the hover art to an own position and size instead (see \"Use my dragged position and size\").",
   "TOKEN_HOVER_ART.Settings.Position.TopLeft": "Top left",
   "TOKEN_HOVER_ART.Settings.Position.TopRight": "Top right",
   "TOKEN_HOVER_ART.Settings.Position.BottomLeft": "Bottom left",
@@ -24,8 +24,8 @@
   "TOKEN_HOVER_ART.Settings.OwnersManageGallery.Hint": "On: owners of an actor can add and remove images and folders in its gallery. Off: only GMs can manage galleries. Owners can still select the hover art of their tokens from the gallery. Changing this setting reloads all clients.",
   "TOKEN_HOVER_ART.Settings.ShowName.Name": "Show token name",
   "TOKEN_HOVER_ART.Settings.ShowName.Hint": "Show the token name below the hover art. The name shows only if the user can see the token nameplate.",
-  "TOKEN_HOVER_ART.Settings.UseCustomPosition.Name": "Use my dragged position",
-  "TOKEN_HOVER_ART.Settings.UseCustomPosition.Hint": "To move the hover art, hold Ctrl while it shows and drag it. The position applies only to you. Turn this off to show the hover art in the corner again.",
+  "TOKEN_HOVER_ART.Settings.UseCustomPosition.Name": "Use my dragged position and size",
+  "TOKEN_HOVER_ART.Settings.UseCustomPosition.Hint": "Hold Ctrl while the hover art shows. Drag it to move it, or drag a corner handle to resize it. The position and size apply only to you. Turn this off to use the corner and the maximum height again.",
   "TOKEN_HOVER_ART.Settings.Enabled.Name": "Show hover art",
   "TOKEN_HOVER_ART.Settings.Enabled.Hint": "Show the hover art on this computer. This setting applies only to you.",
 

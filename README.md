@@ -21,7 +21,7 @@ Then enable **Token Hover Art** in your world under **Game Settings → Manage M
 3. Optional: click the star to make an image the default for new tokens of this actor.
 4. Right-click a token. Click the **images** icon in the left column of the Token HUD. Then select an image, or select the "no hover art" tile. Drag the grip in the bottom-left corner of the palette to resize it; each user keeps their own size.
 5. GMs can click the eye icon in the palette to make the hover art secret. Only GMs and owners see secret hover art.
-6. To move the hover art: hover a token so the image shows, then hold **Ctrl**. The image gets a dashed outline and stays open. Drag it to a new place and release. The position applies only to you. To go back to the corner, turn off **Use my dragged position** in the module settings.
+6. To move or resize the hover art: hover a token so the image shows, then hold **Ctrl**. The image gets a dashed outline, corner handles, and stays open. Drag the image to move it, or drag a corner handle to resize it. A resize keeps the aspect ratio of each image, and the opposite corner stays in place. The position and size apply only to you. To go back to the corner and the maximum height, turn off **Use my dragged position and size** in the module settings.
 
 ## Folder filters
 
@@ -94,8 +94,9 @@ The release workflow then checks that the tag matches `module.json`, builds `mod
 | Default folder filter | World | `*.png` |
 | Show token name | World | Off |
 | Show hover art | Client | On |
-| Use my dragged position | Client (turned on by a Ctrl-drag) | Off |
+| Use my dragged position and size | Client (turned on by a Ctrl-drag) | Off |
 | Dragged position | Client (hidden, set with Ctrl-drag) | None |
+| Dragged size (image height, % of screen) | Client (hidden, set with a Ctrl corner drag) | None |
 | Palette size | Client (hidden, set with the resize grip) | 228 × 290 px |
 
 The color settings accept `#rrggbb` or `#rrggbbaa`; the last two digits are the opacity. In the settings window, each color has a color picker and an opacity slider next to the text field. An invalid value falls back to the default.

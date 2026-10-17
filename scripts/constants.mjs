@@ -25,7 +25,8 @@ export const SETTINGS = Object.freeze({
   OWNERS_MANAGE_GALLERY: "ownersManageGallery",
   PALETTE_SIZE: "paletteSize",
   USE_CUSTOM_POSITION: "useCustomPosition",
-  CUSTOM_POSITION: "customPosition"
+  CUSTOM_POSITION: "customPosition",
+  CUSTOM_SIZE: "customSize"
 });
 
 export const POSITIONS = Object.freeze({

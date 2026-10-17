@@ -130,8 +130,17 @@ export function registerSettings(onDisplayChange) {
     onChange: onDisplayChange
   });
 
-  // The position that this user dragged the display to. See display-position.mjs for the format.
+  // The position that this user dragged the display to. See display-layout.mjs for the format.
   game.settings.register(MODULE_ID, SETTINGS.CUSTOM_POSITION, {
+    scope: "client",
+    config: false,
+    type: Object,
+    default: null,
+    onChange: onDisplayChange
+  });
+
+  // The image height that this user resized the display to. See display-layout.mjs for the format.
+  game.settings.register(MODULE_ID, SETTINGS.CUSTOM_SIZE, {
     scope: "client",
     config: false,
     type: Object,

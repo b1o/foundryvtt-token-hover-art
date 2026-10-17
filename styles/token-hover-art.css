@@ -161,7 +161,8 @@
   flex-direction: column;
   align-items: center;
   --tha-padding: 4px;
-  max-width: 40vw;
+  /* display-layout.mjs sets --tha-image-height, --tha-max-height, and --tha-max-width from the layout. */
+  max-width: var(--tha-max-width, 40vw);
   padding: var(--tha-padding);
   /* hover-display.mjs sets these two variables from the module settings. */
   background: var(--tha-display-background, rgba(0, 0, 0, 0.6));
@@ -201,11 +202,35 @@
   pointer-events: none;
 }
 
+/* Corner handles for the resize. They show only in move mode, inside the corners, so they stay on screen
+   when the display sits in a screen corner. */
+#token-hover-art-display .tha-resize-handle {
+  display: none;
+  position: absolute;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  background: var(--tha-highlight);
+  border: 1px solid var(--tha-shadow);
+  border-radius: 2px;
+}
+
+#token-hover-art-display.visible.moving .tha-resize-handle {
+  display: block;
+}
+
+#token-hover-art-display .tha-resize-handle[data-corner="nw"] { top: 0; left: 0; cursor: nwse-resize; }
+#token-hover-art-display .tha-resize-handle[data-corner="ne"] { top: 0; right: 0; cursor: nesw-resize; }
+#token-hover-art-display .tha-resize-handle[data-corner="sw"] { bottom: 0; left: 0; cursor: nesw-resize; }
+#token-hover-art-display .tha-resize-handle[data-corner="se"] { bottom: 0; right: 0; cursor: nwse-resize; }
+
 /* Core gives every img "border: 1px solid". The display border comes only from the border settings. */
 #token-hover-art-display .tha-media img,
 #token-hover-art-display .tha-media video {
   display: block;
-  max-width: calc(40vw - (2 * var(--tha-padding)));
+  width: auto;
+  height: var(--tha-image-height, auto);
+  max-width: calc(var(--tha-max-width, 40vw) - (2 * var(--tha-padding)));
   max-height: var(--tha-max-height);
   object-fit: contain;
   border: none;

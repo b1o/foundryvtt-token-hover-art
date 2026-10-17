@@ -1,16 +1,16 @@
 import { SETTINGS } from "./constants.mjs";
 import { getSetting, getColorSetting } from "./settings.mjs";
 import { getSelectedArt, canViewArt, isVideo } from "./hover-art-data.mjs";
-import { applyDisplayPosition, makeDisplayDraggable, isDragging } from "./display-position.mjs";
+import { applyDisplayLayout, makeDisplayInteractive, isDragging } from "./display-layout.mjs";
 
 /*
  * The hover display is local to each client. Foundry fires the hoverToken hook only on the client of the user
  * who moves the mouse, and each client already has the token flags, because Foundry sends every document update
  * to all clients. So the display needs no socket messages.
  *
- * Move mode: while the user holds Ctrl, the display stays open and the user can drag it to a new position
- * (see display-position.mjs). Without move mode, the display would hide when the pointer leaves the token
- * on its way to the display.
+ * Move mode: while the user holds Ctrl, the display stays open, and the user can drag it to a new position or
+ * resize it with its corner handles (see display-layout.mjs). Without move mode, the display would hide when the
+ * pointer leaves the token on its way to the display.
  */
 
 /** The key that turns on move mode while it is held. */
@@ -169,7 +169,7 @@ function showDisplay(token, path) {
   caption.textContent = showName ? token.document.name : "";
   caption.hidden = !showName;
 
-  if ( !isDragging() ) applyDisplayPosition(display);
+  if ( !isDragging() ) applyDisplayLayout(display);
   applyAppearance(display);
   shownToken = token;
   display.classList.add("visible");
@@ -178,12 +178,10 @@ function showDisplay(token, path) {
 }
 
 /**
- * Apply the size, background, and border settings to the display.
+ * Apply the background and border settings to the display. The size is part of the layout (display-layout.mjs).
  * @param {HTMLElement} display
  */
 function applyAppearance(display) {
-  display.style.setProperty("--tha-max-height", `${getSetting(SETTINGS.MAX_HEIGHT)}vh`);
-
   // The colors are "#rrggbb" or "#rrggbbaa"; CSS reads both forms, so the alpha needs no conversion.
   display.style.setProperty("--tha-display-background", getColorSetting(SETTINGS.BACKGROUND_COLOR));
 
@@ -235,9 +233,10 @@ function getElement() {
   if ( element ) return element;
   element = document.createElement("div");
   element.id = "token-hover-art-display";
-  element.innerHTML = `<div class="tha-media"></div><div class="tha-caption" hidden></div>`;
+  const handles = ["nw", "ne", "sw", "se"].map(c => `<div class="tha-resize-handle" data-corner="${c}"></div>`);
+  element.innerHTML = `<div class="tha-media"></div><div class="tha-caption" hidden></div>${handles.join("")}`;
   document.body.append(element);
-  makeDisplayDraggable(element, hideIfNotHovered);
+  makeDisplayInteractive(element, hideIfNotHovered);
   return element;
 }
 
