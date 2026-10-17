@@ -2,7 +2,7 @@
   "id": "token-hover-art",
   "title": "Token Hover Art",
   "description": "Give each actor a gallery of hover art. Owners select one image per token, and every user sees that image in a screen corner when they hover the token.",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "authors": [
     {
       "name": "b1o",
@@ -11,7 +11,7 @@
   ],
   "url": "https://github.com/b1o/foundryvtt-token-hover-art",
   "manifest": "https://github.com/b1o/foundryvtt-token-hover-art/releases/latest/download/module.json",
-  "download": "https://github.com/b1o/foundryvtt-token-hover-art/releases/download/v0.3.1/module.zip",
+  "download": "https://github.com/b1o/foundryvtt-token-hover-art/releases/download/v0.4.0/module.zip",
   "bugs": "https://github.com/b1o/foundryvtt-token-hover-art/issues",
   "readme": "https://github.com/b1o/foundryvtt-token-hover-art/blob/main/README.md",
   "compatibility": {
