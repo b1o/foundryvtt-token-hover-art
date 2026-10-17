@@ -202,13 +202,26 @@
   border-radius: 4px;
 }
 
+/* The name lies on the bottom edge of the image. The insets match the 4px padding of the display, so the band
+   covers the image edge to edge. The gradient darkens only the bottom of the image, so light text stays
+   readable on light and dark images. */
 #token-hover-art-display .tha-caption {
-  padding: 4px 6px 2px;
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  padding: 18px 8px 6px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.35) 60%, rgba(0, 0, 0, 0));
   color: var(--tha-text-1);
   font-family: var(--font-primary, "Signika", sans-serif);
   font-size: var(--font-size-16, 1rem);
   text-align: center;
   text-shadow: 0 0 4px var(--tha-shadow);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 /* ---------------------------------------- */
