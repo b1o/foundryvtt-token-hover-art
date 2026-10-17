@@ -193,12 +193,14 @@
   pointer-events: none;
 }
 
+/* Core gives every img "border: 1px solid". The display border comes only from the border settings. */
 #token-hover-art-display .tha-media img,
 #token-hover-art-display .tha-media video {
   display: block;
   max-width: calc(40vw - 8px);
   max-height: var(--tha-max-height);
   object-fit: contain;
+  border: none;
   border-radius: 4px;
 }
 
