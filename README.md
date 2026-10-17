@@ -15,9 +15,9 @@ Then enable **Token Hover Art** in your world under **Game Settings → Manage M
 ## Use
 
 1. Open an actor sheet and click **Hover Art** in the sheet header.
-2. Add images to the gallery in one of two ways:
-   - **Images:** add one image at a time with the file browser, or type a path.
-   - **Folders:** add a folder and a file name filter. All matching images in that folder join the gallery.
+2. Add images to the gallery in one of two ways. In both rows, type a path or click the browse button to put a path into the field, then click **Add** (or press Enter):
+   - **Add image:** one image.
+   - **Add folder:** a folder and a file name filter. All matching images in that folder join the gallery.
 3. Optional: click the star to make an image the default for new tokens of this actor.
 4. Right-click a token. Click the **images** icon in the left column of the Token HUD. Then select an image, or select the "no hover art" tile. Drag the grip in the bottom-left corner of the palette to resize it; each user keeps their own size.
 5. GMs can click the eye icon in the palette to make the hover art secret. Only GMs and owners see secret hover art.

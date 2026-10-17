@@ -93,14 +93,15 @@
     <label>{{localize "TOKEN_HOVER_ART.Gallery.AddPath"}}</label>
     <div class="form-fields">
       <input type="text" name="path" placeholder="{{localize "TOKEN_HOVER_ART.Gallery.PathPlaceholder"}}">
-      <button type="button" data-action="add-path" data-tooltip="TOKEN_HOVER_ART.Gallery.AddPath">
-        <i class="fas fa-plus"></i>
-      </button>
       {{#if canBrowse}}
-      <button type="button" data-action="browse" data-tooltip="{{#if canUpload}}TOKEN_HOVER_ART.Gallery.BrowseUpload{{else}}TOKEN_HOVER_ART.Gallery.Browse{{/if}}">
-        <i class="fas fa-file-import"></i>
+      <button type="button" class="tha-browse" data-action="browse"
+              data-tooltip="{{#if canUpload}}TOKEN_HOVER_ART.Gallery.BrowseUpload{{else}}TOKEN_HOVER_ART.Gallery.Browse{{/if}}">
+        <i class="fas fa-file-import fa-fw"></i>
       </button>
       {{/if}}
+      <button type="button" class="tha-add" data-action="add-path">
+        <i class="fas fa-plus"></i> {{localize "TOKEN_HOVER_ART.Gallery.AddButton"}}
+      </button>
     </div>
     {{#unless canBrowse}}
     <p class="hint">{{localize "TOKEN_HOVER_ART.Gallery.NoBrowsePermission"}}</p>
@@ -112,12 +113,13 @@
     <label>{{localize "TOKEN_HOVER_ART.Folders.Add"}}</label>
     <div class="form-fields">
       <input type="text" name="folderPath" placeholder="{{localize "TOKEN_HOVER_ART.Folders.PathPlaceholder"}}">
-      <input type="text" name="folderFilter" class="tha-folder-filter-new" placeholder="{{defaultFilter}}">
-      <button type="button" data-action="add-folder" data-tooltip="TOKEN_HOVER_ART.Folders.Add">
-        <i class="fas fa-plus"></i>
+      <button type="button" class="tha-browse" data-action="browse-folder" data-tooltip="TOKEN_HOVER_ART.Folders.Browse">
+        <i class="fas fa-folder-open fa-fw"></i>
       </button>
-      <button type="button" data-action="browse-folder" data-tooltip="TOKEN_HOVER_ART.Folders.Browse">
-        <i class="fas fa-folder-plus"></i>
+      <input type="text" name="folderFilter" class="tha-folder-filter-new" placeholder="{{defaultFilter}}"
+             data-tooltip="TOKEN_HOVER_ART.Folders.NewFilterTooltip">
+      <button type="button" class="tha-add" data-action="add-folder">
+        <i class="fas fa-plus"></i> {{localize "TOKEN_HOVER_ART.Gallery.AddButton"}}
       </button>
     </div>
     <p class="hint">{{localize "TOKEN_HOVER_ART.Folders.Hint"}}</p>

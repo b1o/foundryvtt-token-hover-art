@@ -273,8 +273,33 @@
 }
 
 .token-hover-art input.tha-folder-filter-new {
-  flex: 0 0 120px;
+  flex: 0 0 110px;
   font-family: var(--tha-font-mono);
+}
+
+/* The browse button fills the field next to it, as core file picker buttons do. Add is the only add action.
+   Core gives buttons "width: 100%", so the buttons set their own width and the path fields take the rest. */
+.token-hover-art .form-fields input[name="path"],
+.token-hover-art .form-fields input[name="folderPath"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.token-hover-art .form-fields button.tha-browse {
+  flex: 0 0 32px;
+  width: 32px;
+}
+
+.token-hover-art .form-fields button.tha-add {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.token-hover-art .form-fields button.tha-add:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .token-hover-art .tha-gallery-item {

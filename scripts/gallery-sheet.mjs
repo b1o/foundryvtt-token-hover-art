@@ -105,6 +105,39 @@ export class HoverArtGallery extends getDocumentSheetClass() {
     html.find("input.tha-folder-filter").on("keydown", event => {
       this.#onEnter(event, () => event.currentTarget.blur());
     });
+
+    // Each Add button is enabled only while its field has a value.
+    html.find('input[name="path"], input[name="folderPath"]').on("input", () => this.#updateAddButtons());
+    this.#updateAddButtons();
+  }
+
+  /**
+   * The storage of the folder that the folder picker last put into the folder field. A typed path has no storage,
+   * so the Add action uses this storage only while the field still shows the picked folder.
+   * @type {{folder: string, source: string, bucket: string|null}|null}
+   */
+  #pickedFolder = null;
+
+  /**
+   * Enable each Add button only while its field has a value, so an Add click never does nothing.
+   */
+  #updateAddButtons() {
+    const {path, folderPath} = this.form.elements;
+    const addImage = this.form.querySelector('[data-action="add-path"]');
+    const addFolder = this.form.querySelector('[data-action="add-folder"]');
+    if ( addImage ) addImage.disabled = !path.value.trim();
+    if ( addFolder && folderPath ) addFolder.disabled = !folderPath.value.trim();
+  }
+
+  /**
+   * Put a picked path into a field, as the core file picker fields do. The user then confirms it with Add.
+   * @param {HTMLInputElement} input
+   * @param {string} value
+   */
+  #fillField(input, value) {
+    input.value = value;
+    this.#updateAddButtons();
+    input.focus();
   }
 
   /**
@@ -173,14 +206,16 @@ export class HoverArtGallery extends getDocumentSheetClass() {
   /* -------------------------------------------- */
 
   /**
-   * Open the core FilePicker. Users with the FILES_UPLOAD permission can also upload new files in it.
+   * Open the core FilePicker. The picked file goes into the path field; Add then adds it to the gallery.
+   * Users with the FILES_UPLOAD permission can also upload new files in the picker.
    */
   #browseImage() {
+    const input = this.form.elements.path;
     const FilePickerClass = getFilePickerClass();
     const picker = new FilePickerClass({
       type: "imagevideo",
-      current: getManualImages(this.document).at(-1) ?? "",
-      callback: path => this.#addImage(path).catch(err => ui.notifications.error(err.message))
+      current: input.value.trim() || (getManualImages(this.document).at(-1) ?? ""),
+      callback: path => this.#fillField(input, path)
     });
     return picker.render(true);
   }
@@ -244,30 +279,34 @@ export class HoverArtGallery extends getDocumentSheetClass() {
   /* -------------------------------------------- */
 
   /**
-   * Open the core FilePicker in folder mode. The filter field of the form applies to the new folder.
-   * The callback reads the storage from the picker instance, not from a callback argument, because the
-   * callback arguments are documented only for some core versions.
+   * Open the core FilePicker in folder mode. The picked folder goes into the folder field; Add then adds it
+   * with the filter of the filter field. The storage comes from the picker instance, not from a callback
+   * argument, because the callback arguments are documented only for some core versions.
    */
   #browseFolder() {
-    const filter = this.form.elements.folderFilter.value;
+    const input = this.form.elements.folderPath;
     const FilePickerClass = getFilePickerClass();
     const picker = new FilePickerClass({
       type: "folder",
-      current: getFolderSources(this.document).at(-1)?.folder ?? "",
+      current: input.value.trim() || (getFolderSources(this.document).at(-1)?.folder ?? ""),
       callback: folder => {
-        const data = {folder, filter, source: picker.activeSource, bucket: picker.source?.bucket};
-        this.#addFolder(data).catch(err => ui.notifications.error(err.message));
+        this.#pickedFolder = {folder, source: picker.activeSource, bucket: picker.source?.bucket ?? null};
+        this.#fillField(input, folder);
       }
     });
     return picker.render(true);
   }
 
   /**
-   * Add the folder that is typed in the folder field, with the typed filter.
+   * Add the folder in the folder field, with the filter in the filter field.
    */
   async #addFolderFromFields() {
     const {folderPath, folderFilter} = this.form.elements;
-    if ( folderPath.value.trim() ) await this.#addFolder({folder: folderPath.value, filter: folderFilter.value});
+    const folder = folderPath.value.trim();
+    if ( !folder ) return;
+    const picked = (this.#pickedFolder?.folder === folder) ? this.#pickedFolder : null;
+    await this.#addFolder({folder, filter: folderFilter.value, source: picked?.source, bucket: picked?.bucket});
+    this.#pickedFolder = null;
   }
 
   /**
