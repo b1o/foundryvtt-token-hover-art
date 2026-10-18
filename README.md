@@ -1,6 +1,16 @@
-# Token Hover Art (Foundry VTT v11 and later)
+# Token Hover Art (Foundry VTT v11)
 
 Give each actor a gallery of hover art. Select one image for each token. When a user hovers the token, the full image shows in a screen corner at once. When the pointer leaves the token, the image hides after a short delay. Each user can drag the image to an own position.
+
+## Disclaimer
+
+I made this module first for personal use. It has the features that I find useful for my own group.
+
+- The module is heavily vibe-coded. I do not give regular maintenance. I make updates only when I need them myself.
+- The module targets Foundry VTT v11. I do not guarantee that it works in later versions, especially v13 and later.
+- I do not guarantee that I accept or review a pull request. You are free to fork the module and change it, under
+  the terms of the [license](#license).
+- Use the module at your own risk. I take no responsibility for problems that come from the use of this module.
 
 ## Install
 
@@ -100,3 +110,8 @@ The release workflow then checks that the tag matches `module.json`, builds `mod
 | Palette size | Client (hidden, set with the resize grip) | 228 × 290 px |
 
 The color settings accept `#rrggbb` or `#rrggbbaa`; the last two digits are the opacity. In the settings window, each color has a color picker and an opacity slider next to the text field. An invalid value falls back to the default.
+
+## License
+
+[MIT](LICENSE). You are free to use, change, and share the module. Keep the copyright notice in all copies, so that
+the author gets credit.
