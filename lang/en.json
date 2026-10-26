@@ -27,9 +27,12 @@
   "TOKEN_HOVER_ART.Settings.ShowName.Name": "Show token name",
   "TOKEN_HOVER_ART.Settings.ShowName.Hint": "Show the token name below the hover art. The name shows only if the user can see the token nameplate.",
   "TOKEN_HOVER_ART.Settings.UseCustomPosition.Name": "Use my dragged position and size",
-  "TOKEN_HOVER_ART.Settings.UseCustomPosition.Hint": "Hold Ctrl while the hover art shows. Drag it to move it, or drag a corner handle to resize it. The position and size apply only to you. Turn this off to use the corner and the maximum height again.",
+  "TOKEN_HOVER_ART.Settings.UseCustomPosition.Hint": "Hold the move key (default: Ctrl, see Configure Controls) while the hover art shows. Drag it to move it, or drag a corner handle to resize it. The position and size apply only to you. Turn this off to use the corner and the maximum height again.",
   "TOKEN_HOVER_ART.Settings.Enabled.Name": "Show hover art",
   "TOKEN_HOVER_ART.Settings.Enabled.Hint": "Show the hover art on this computer. This setting applies only to you.",
+
+  "TOKEN_HOVER_ART.Keybindings.MoveDisplay.Name": "Move or resize the hover art",
+  "TOKEN_HOVER_ART.Keybindings.MoveDisplay.Hint": "Hold this key while the hover art shows. The hover art stays open: drag it to move it, or drag a corner handle to resize it.",
 
   "TOKEN_HOVER_ART.Gallery.Button": "Hover Art",
   "TOKEN_HOVER_ART.Gallery.Title": "Hover Art Gallery",

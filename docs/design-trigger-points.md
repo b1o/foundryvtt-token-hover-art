@@ -352,34 +352,36 @@ scripts/
   output.mjs                   prefixed log and notifications
   compat.mjs                   version differences; the Token HUD column; findByUuid; the hotbar lock
   sheet-header-buttons.mjs     the "Hover Art" button in actor sheet headers (opens the gallery manager)
-  keyboard-focus.mjs           give the focus back after a pointer click (v11 keybinding trap)
+  keyboard-focus.mjs           give the focus back after a pointer click and at a drag start (v11 keybinding trap)
   pointer-drag.mjs             one pointer drag with a click threshold (hover display and picker)
+  viewport.mjs                 the viewport size; put or move an element inside the viewport
   gallery-sheet.mjs            the gallery manager
   color-fields.mjs
   data/
     gallery-data.mjs           gallery, selection (applyAsset is the only writer), secret, defaults
     folder-sources.mjs         class FolderSources: folder scans, writes one after the other
     category-store.mjs         User flag reads and serialized writes of the categories
+    write-queue.mjs            runs the writes of one data owner one after the other
   decisions/                   pure, no Foundry or DOM globals (ESLint enforces this)
     gallery-rules.mjs          who may manage a gallery; token name visibility on hover
     folder-list.mjs            changes to the folder list, applied to the list as it is at the write
-    picker-placement.mjs       picker size limits, default places (beside the trigger, screen center), clamp
+    picker-placement.mjs       picker size limits, default places (beside the trigger, screen center)
     picker-offsets.mjs         dragged position: translation from the default place
     picker-view.mjs            template data of the picker
-    screen-geometry.mjs        edges, fractions, clamp (shared by the hover display and the picker)
+    screen-geometry.mjs        viewport limit, edges, fractions, clamp (shared by the hover display and the picker)
     category-tree.mjs          tree rules (6.2)
     tile-marks.mjs             multi-select: marks, ranges, the items of a move (6.4)
     shortcut-payload.mjs       the drag payload, its validation, and the parts of a macro name
   picker/
     gallery-picker.mjs         state, open, close, render, actions
     picker-gestures.mjs        header move and grip resize
-    picker-position.mjs        class PickerPosition: dragged or default placement, save and reset per reference
+    picker-position.mjs        dragged or default placement, save and reset per reference
     open-picker-listeners.mjs  page listeners while open: outside press, Escape, window resize
     picker-shell.mjs           the page elements: root, rendered content (keeps scroll and focus), popup
     picker-menu.mjs            class PickerMenu: the popup (menu, choice list, name field, confirmation)
     picker-menus.mjs           the content of each popup: category menu, name field, user choice
     picker-categories.mjs      category reads and writes for the picker (through CategoryStore)
-    picker-tiles.mjs           marks and drag and drop together (a drag of a marked tile moves all marks)
+    picker-tiles.mjs           drag and drop and tile menus (a move of a marked tile moves all marks)
     picker-marks.mjs           class PickerMarks: the marked tiles and their look
     picker-drag-drop.mjs       drag sources and drop targets in the picker
   triggers/
