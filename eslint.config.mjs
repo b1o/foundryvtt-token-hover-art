@@ -20,7 +20,7 @@ export default [
       globals: {
         ...globals.browser, game: "readonly", canvas: "readonly", ui: "readonly", Hooks: "readonly",
         foundry: "readonly", CONFIG: "readonly", CONST: "readonly", DocumentSheet: "readonly", FilePicker: "readonly",
-        getTemplate: "readonly", loadTemplates: "readonly", VideoHelper: "readonly", fromUuidSync: "readonly"
+        getTemplate: "readonly", VideoHelper: "readonly", fromUuidSync: "readonly"
       }
     }
   },

@@ -83,15 +83,18 @@ export class HoverArtGallery extends getDocumentSheetClass() {
     const defaultArt = getDefaultArt(actor);
     const toImage = path => ({path, isVideo: isVideo(path), isDefault: path === defaultArt});
     const manual = getManualImages(actor);
+    // The core file browser and the folder scan need the same permission.
+    const canBrowse = this.#folderSources.canScan();
     return {
       editable: this.isEditable,
-      canBrowse: game.user.can("FILES_BROWSE"),
+      canBrowse,
       canUpload: game.user.can("FILES_UPLOAD"),
-      canScan: this.isEditable && this.#folderSources.canScan(),
+      canScan: this.isEditable && canBrowse,
       defaultFilter: getDefaultFilter(),
       defaultSecret: isDefaultSecret(actor),
       manualImages: manual.map((path, index) => ({
         ...toImage(path),
+        isManual: true,
         index,
         isFirst: index === 0,
         isLast: index === manual.length - 1

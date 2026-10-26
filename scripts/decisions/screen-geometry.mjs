@@ -1,6 +1,7 @@
 /*
- * Screen positions that keep their place when the window size changes, for the hover display, and the clamp that
- * the gallery picker uses too. No Foundry and no DOM access: the callers pass the values.
+ * Screen positions: the viewport limit for every element that the module puts on the screen, and the positions that
+ * keep their place when the window size changes, for the hover display. No Foundry and no DOM access: the callers
+ * pass the values.
  */
 
 /**
@@ -38,6 +39,20 @@ export function clamp(value, min, max) {
  * @property {number} width
  * @property {number} height
  */
+
+/**
+ * Keep an element inside the viewport.
+ * @param {Rect} rect      The wanted screen rectangle of the element.
+ * @param {Size} viewport
+ * @returns {{left: number, top: number}}  The position, rounded, with the whole rectangle inside the viewport. A
+ *                                         rectangle larger than the viewport starts at the top-left corner.
+ */
+export function keepInViewport({left, top, width, height}, viewport) {
+  return {
+    left: Math.round(clamp(left, 0, Math.max(viewport.width - width, 0))),
+    top: Math.round(clamp(top, 0, Math.max(viewport.height - height, 0)))
+  };
+}
 
 /**
  * @param {Rect} rect      The screen rectangle of the element.

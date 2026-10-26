@@ -4,6 +4,7 @@ import {
 } from "../settings.mjs";
 import { clamp, toEdgePosition } from "../decisions/screen-geometry.mjs";
 import { runPointerDrag } from "../pointer-drag.mjs";
+import { getViewportSize, moveInViewport } from "../viewport.mjs";
 
 /*
  * The layout of the hover display: where it is and how large its image is.
@@ -134,10 +135,9 @@ function createMoveHandler(display) {
   return {
     onMove(dx, dy) {
       clearPosition(display);
-      display.style.left = `${clamp(start.left + dx, 0, window.innerWidth - start.width)}px`;
-      display.style.top = `${clamp(start.top + dy, 0, window.innerHeight - start.height)}px`;
+      moveInViewport(display, start, dx, dy);
     },
-    save: () => saveCustomLayout({position: toEdgePosition(display.getBoundingClientRect(), getViewport())})
+    save: () => saveCustomLayout({position: toEdgePosition(display.getBoundingClientRect(), getViewportSize())})
   };
 }
 
@@ -152,6 +152,7 @@ function createMoveHandler(display) {
 function createResizeHandler(display, corner) {
   const media = display.querySelector(".tha-media img, .tha-media video");
   const start = display.getBoundingClientRect();
+  const viewport = getViewportSize();
   const image = media.getBoundingClientRect();
   const aspect = image.width / image.height;
 
@@ -165,8 +166,8 @@ function createResizeHandler(display, corner) {
   const fixedY = (signY < 0) ? start.bottom : start.top;
 
   // The largest image height that keeps the display inside the screen, seen from the fixed corner.
-  const roomX = (signX < 0) ? fixedX : (window.innerWidth - fixedX);
-  const roomY = (signY < 0) ? fixedY : (window.innerHeight - fixedY);
+  const roomX = (signX < 0) ? fixedX : (viewport.width - fixedX);
+  const roomY = (signY < 0) ? fixedY : (viewport.height - fixedY);
   const maxImageHeight = Math.min(roomY - frame.height, (roomX - frame.width) / aspect);
 
   return {
@@ -179,16 +180,14 @@ function createResizeHandler(display, corner) {
       display.style.left = `${(signX < 0) ? (fixedX - width) : fixedX}px`;
       display.style.top = `${(signY < 0) ? (fixedY - (height + frame.height)) : fixedY}px`;
     },
-    save: () => saveCustomLayout({
-      position: toEdgePosition(display.getBoundingClientRect(), getViewport()),
-      size: {height: clamp(media.getBoundingClientRect().height / window.innerHeight, 0, 1)}
-    })
+    save: () => {
+      const viewportNow = getViewportSize();
+      return saveCustomLayout({
+        position: toEdgePosition(display.getBoundingClientRect(), viewportNow),
+        size: {height: clamp(media.getBoundingClientRect().height / viewportNow.height, 0, 1)}
+      });
+    }
   };
-}
-
-/** @returns {{width: number, height: number}} */
-function getViewport() {
-  return {width: window.innerWidth, height: window.innerHeight};
 }
 
 /**

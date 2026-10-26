@@ -47,14 +47,14 @@
 <div class="tha-picker-grid">
   {{#each categories}}
   <div class="tha-tile" draggable="true" data-tha-drag="category" data-category-id="{{id}}" data-tha-drop
-       data-tha-tile-key="category:{{id}}">
+       data-tha-tile-key="{{tileKey}}">
     <button type="button" class="tha-choice tha-category {{#if containsSelection}}tha-holds-selection{{/if}}"
-            data-tha-action="open-category" data-category-id="{{id}}" data-tha-focus-key="category:{{id}}">
+            data-tha-action="open-category" data-category-id="{{id}}" data-tha-focus-key="{{tileKey}}">
       <i class="fas fa-folder" aria-hidden="true"></i>
       <span class="tha-category-name">{{name}}</span>
     </button>
     <button type="button" class="tha-tile-menu" data-tha-action="tile-menu"
-            data-tha-focus-key="menu:category:{{id}}" aria-haspopup="menu"
+            data-tha-focus-key="menu:{{tileKey}}" aria-haspopup="menu"
             aria-label="{{localize "TOKEN_HOVER_ART.Picker.TileMenu" name=name}}">
       <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
     </button>
@@ -72,9 +72,9 @@
   </div>
   {{/if}}
   {{#each images}}
-  <div class="tha-tile" draggable="true" data-tha-drag="asset" data-path="{{path}}" data-tha-tile-key="asset:{{path}}">
+  <div class="tha-tile" draggable="true" data-tha-drag="asset" data-path="{{path}}" data-tha-tile-key="{{tileKey}}">
     <button type="button" class="tha-choice {{#if active}}active{{/if}}" data-tha-action="select"
-            data-path="{{path}}" data-tha-focus-key="asset:{{path}}"
+            data-path="{{path}}" data-tha-focus-key="{{tileKey}}"
             aria-pressed="{{#if active}}true{{else}}false{{/if}}" aria-label="{{name}}">
       {{#if isVideo}}
       <video src="{{path}}" muted loop autoplay playsinline aria-hidden="true"></video>
@@ -83,7 +83,7 @@
       {{/if}}
     </button>
     <button type="button" class="tha-tile-menu" data-tha-action="tile-menu"
-            data-tha-focus-key="menu:asset:{{path}}" aria-haspopup="menu"
+            data-tha-focus-key="menu:{{tileKey}}" aria-haspopup="menu"
             aria-label="{{localize "TOKEN_HOVER_ART.Picker.TileMenu" name=name}}">
       <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
     </button>

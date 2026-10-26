@@ -29,7 +29,7 @@ export function clampPickerSize(size) {
 
 /**
  * The default place next to a trigger: to the left of it, with the picker center at a given height. Not clamped: a
- * dragged offset is added to it first (picker-offsets.mjs), and keepInViewport runs last.
+ * dragged offset is added to it first (picker-offsets.mjs), and keepInViewport (screen-geometry.mjs) runs last.
  * @param {import("./screen-geometry.mjs").Rect} anchor  The screen rectangle of the trigger.
  * @param {number} centerY  The height of the picker center: the token center for a picker from the Token HUD, else
  *                          the trigger center.
@@ -48,18 +48,4 @@ export function getBesideTrigger(anchor, centerY, size) {
  */
 export function getViewportCenter(size, viewport) {
   return {left: (viewport.width - size.width) / 2, top: (viewport.height - size.height) / 2};
-}
-
-/**
- * Keep a picker position inside the viewport. The last step of every placement.
- * @param {import("./screen-geometry.mjs").Rect} rect  The screen rectangle of the picker now.
- * @param {import("./screen-geometry.mjs").Size} viewport
- * @returns {{left: number, top: number}}  The position, rounded, with the whole rectangle inside the viewport. A
- *                                         rectangle larger than the viewport starts at the top-left corner.
- */
-export function keepInViewport({left, top, width, height}, viewport) {
-  return {
-    left: Math.round(clamp(left, 0, Math.max(viewport.width - width, 0))),
-    top: Math.round(clamp(top, 0, Math.max(viewport.height - height, 0)))
-  };
 }

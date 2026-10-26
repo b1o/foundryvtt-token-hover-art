@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  NO_MARKS, startAt, toggleMark, markRange, addRange, keepShown, toMovedItems, getMovedKeys
+  NO_MARKS, startAt, toggleMark, markRange, addRange, keepShown, toMovedItems, getMovedKeys, assetKey, categoryKey
 } from "../scripts/decisions/tile-marks.mjs";
 
 const order = ["category:a", "asset:1.png", "asset:2.png", "asset:3.png", "asset:4.png"];
@@ -41,4 +41,9 @@ test("a move of a marked tile moves all marks; a move of another tile moves only
   assert.deepEqual(getMovedKeys(marks, "asset:2.png"), ["asset:2.png"]);
   assert.deepEqual(toMovedItems(["asset:1.png", "category:a", "asset:a:b.png"]),
     {paths: ["1.png", "a:b.png"], categoryIds: ["a"]});
+});
+
+test("the keys of the picker tiles give back their paths and category ids", () => {
+  const keys = [assetKey("art/a:b.png"), categoryKey("moods")];
+  assert.deepEqual(toMovedItems(keys), {paths: ["art/a:b.png"], categoryIds: ["moods"]});
 });

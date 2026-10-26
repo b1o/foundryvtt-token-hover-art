@@ -111,7 +111,8 @@
 }
 
 /* The column count follows the picker width. The stable gutter keeps space for the vertical scrollbar,
-   so the scrollbar never pushes the last column out and causes a horizontal scrollbar. */
+   so the scrollbar never pushes the last column out and causes a horizontal scrollbar. The grid has no text
+   selection, so Shift+click only marks tiles (picker-marks.mjs). */
 .tha-picker-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, 68px);
@@ -121,6 +122,7 @@
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-gutter: stable;
+  user-select: none;
 }
 
 .tha-picker-resize {
@@ -286,11 +288,7 @@
   font-size: var(--font-size-11, 0.6875rem);
 }
 
-/* A marked tile (multi-select, picker-marks.mjs). The grid has no text selection, so Shift+click only marks. */
-.tha-picker-grid {
-  user-select: none;
-}
-
+/* A marked tile (multi-select, picker-marks.mjs). */
 .tha-picker .tha-marked > .tha-choice {
   opacity: 1;
   outline: 2px solid var(--tha-text-1);

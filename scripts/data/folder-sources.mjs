@@ -1,5 +1,6 @@
 import { getDefaultFilter } from "../settings.mjs";
 import { getFolderSources, setFolderSources } from "./gallery-data.mjs";
+import { WriteQueue } from "./write-queue.mjs";
 import { hasFolder, replaceFolder, removeFolder, applyScanResults } from "../decisions/folder-list.mjs";
 import { getFilePickerClass } from "../compat.mjs";
 import { log } from "../output.mjs";
@@ -35,8 +36,7 @@ const MEDIA_EXTENSIONS = Object.keys(CONST.IMAGE_FILE_EXTENSIONS)
 
 export class FolderSources {
 
-  /** The last write of this client. The next write starts when it ends. */
-  #lastWrite = Promise.resolve();
+  #writes = new WriteQueue();
 
   /**
    * @returns {boolean}  Can the current user scan folders?
@@ -134,15 +134,12 @@ export class FolderSources {
    * @returns {Promise<boolean>}  Did the change write a new list?
    */
   #write(actor, change) {
-    const write = this.#lastWrite.then(async () => {
+    return this.#writes.run(async () => {
       const folders = change(getFolderSources(actor));
       if ( !folders ) return false;
       await setFolderSources(actor, folders);
       return true;
     });
-    // A failed write must not stop the writes after it. The caller of this write gets its error.
-    this.#lastWrite = write.then(() => undefined, () => undefined);
-    return write;
   }
 }
 

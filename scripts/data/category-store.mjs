@@ -1,4 +1,6 @@
 import { MODULE_ID, FLAGS } from "../constants.mjs";
+import { getBaseActor } from "./gallery-data.mjs";
+import { WriteQueue } from "./write-queue.mjs";
 import {
   readCategoryMap, planCreateCategory, planRenameCategory, planDeleteCategory, planMoveItems
 } from "../decisions/category-tree.mjs";
@@ -27,8 +29,15 @@ import {
 
 export class CategoryStore {
 
-  /** The last write of this client. The next write starts when it ends. */
-  #lastWrite = Promise.resolve();
+  #writes = new WriteQueue();
+
+  /**
+   * @param {TokenDocument} tokenDoc
+   * @returns {CategoryScope}  The categories of the current user for the gallery of the token.
+   */
+  scopeOf(tokenDoc) {
+    return {userId: game.user.id, actorId: getBaseActor(tokenDoc.actor)?.id ?? null};
+  }
 
   /**
    * @param {CategoryScope} scope
@@ -86,16 +95,13 @@ export class CategoryStore {
    * @returns {Promise<boolean>}  Did the change write?
    */
   #write(scope, plan) {
-    const write = this.#lastWrite.then(async () => {
+    return this.#writes.run(async () => {
       if ( !scope.actorId ) throw new Error(game.i18n.localize("TOKEN_HOVER_ART.Errors.NoActor"));
       const patch = plan(this.read(scope));
       if ( !patch ) return false;
       await game.users.get(scope.userId).update(toUpdate(scope.actorId, patch));
       return true;
     });
-    // A failed write must not stop the writes after it. The caller of this write gets its error.
-    this.#lastWrite = write.then(() => undefined, () => undefined);
-    return write;
   }
 }
 

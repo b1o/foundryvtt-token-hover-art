@@ -1,4 +1,4 @@
-import { keepInViewport } from "../decisions/picker-placement.mjs";
+import { placeInViewport } from "../viewport.mjs";
 import { isPointerClick } from "../keyboard-focus.mjs";
 
 /*
@@ -130,10 +130,7 @@ export class PickerMenu {
   #place() {
     const opener = this.#opener.getBoundingClientRect();
     const {width, height} = this.#element.getBoundingClientRect();
-    const viewport = {width: window.innerWidth, height: window.innerHeight};
-    const {left, top} = keepInViewport({left: opener.left, top: opener.bottom + 2, width, height}, viewport);
-    this.#element.style.left = `${left}px`;
-    this.#element.style.top = `${top}px`;
+    placeInViewport(this.#element, {left: opener.left, top: opener.bottom + 2, width, height});
   }
 
   #takeFocus() {

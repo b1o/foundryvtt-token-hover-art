@@ -1,6 +1,6 @@
 import { MODULE_ID, FLAGS } from "../constants.mjs";
 import { areHotbarShortcutsEnabled } from "../settings.mjs";
-import { applyAsset, getBaseActor, isVideo } from "../data/gallery-data.mjs";
+import { applyAsset, isVideo } from "../data/gallery-data.mjs";
 import { getAncestors, isLocation } from "../decisions/category-tree.mjs";
 import { isShortcutDrop, readShortcut, isSameShortcut, joinNameParts } from "../decisions/shortcut-payload.mjs";
 import { getFileName } from "../decisions/picker-view.mjs";
@@ -148,7 +148,7 @@ export class HotbarTrigger {
       return [(shortcut.path === null) ? game.i18n.localize("TOKEN_HOVER_ART.Picker.None") : getFileName(shortcut.path)];
     }
     if ( shortcut.kind !== "category" ) return [];
-    const map = this.#categoryStore.read(this.#getScope(tokenDoc));
+    const map = this.#categoryStore.read(this.#categoryStore.scopeOf(tokenDoc));
     return getAncestors(map, shortcut.categoryId).map(id => map[id].name);
   }
 
@@ -160,17 +160,10 @@ export class HotbarTrigger {
    */
   #getExistingCategory(shortcut, tokenDoc) {
     if ( shortcut.kind !== "category" ) return null;
-    if ( isLocation(this.#categoryStore.read(this.#getScope(tokenDoc)), shortcut.categoryId) ) return shortcut.categoryId;
+    const map = this.#categoryStore.read(this.#categoryStore.scopeOf(tokenDoc));
+    if ( isLocation(map, shortcut.categoryId) ) return shortcut.categoryId;
     notify.info("TOKEN_HOVER_ART.Hotbar.CategoryMissing");
     return null;
-  }
-
-  /**
-   * @param {TokenDocument} tokenDoc
-   * @returns {import("../data/category-store.mjs").CategoryScope}  The categories of the current user.
-   */
-  #getScope(tokenDoc) {
-    return {userId: game.user.id, actorId: getBaseActor(tokenDoc.actor)?.id ?? null};
   }
 }
 
@@ -183,13 +176,17 @@ export class HotbarTrigger {
 function getIcon(shortcut, tokenDoc) {
   switch ( shortcut.kind ) {
     case "category": return ICONS.CATEGORY;
-    case "asset":
-      if ( shortcut.path === null ) return ICONS.NONE;
-      return isVideo(shortcut.path) ? ICONS.VIDEO : shortcut.path;
-    default: {
-      const image = tokenDoc.texture.src;
-      if ( !image ) return ICONS.NO_TOKEN_IMAGE;
-      return isVideo(image) ? ICONS.VIDEO : image;
-    }
+    case "asset": return toIconImage(shortcut.path, ICONS.NONE);
+    default: return toIconImage(tokenDoc.texture.src, ICONS.NO_TOKEN_IMAGE);
   }
+}
+
+/**
+ * @param {string|null} path  An image or a video.
+ * @param {string} fallback   The icon if there is no path.
+ * @returns {string}  The path, or the video icon for a video.
+ */
+function toIconImage(path, fallback) {
+  if ( !path ) return fallback;
+  return isVideo(path) ? ICONS.VIDEO : path;
 }

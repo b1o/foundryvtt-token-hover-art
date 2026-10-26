@@ -1,4 +1,3 @@
-import { TEMPLATES } from "./constants.mjs";
 import { registerSettings } from "./settings.mjs";
 import { addColorFields } from "./color-fields.mjs";
 import { hasModuleFlagChange } from "./data/gallery-data.mjs";
@@ -11,7 +10,7 @@ import { DisplayLayout } from "./hover/display-layout.mjs";
 import { HoverDisplay } from "./hover/hover-display.mjs";
 import { FolderSources } from "./data/folder-sources.mjs";
 import { CategoryStore } from "./data/category-store.mjs";
-import { findByUuid, preloadTemplates } from "./compat.mjs";
+import { findByUuid } from "./compat.mjs";
 import { MODULE_ID } from "./constants.mjs";
 
 const timers = {setTimeout: (fn, ms) => window.setTimeout(fn, ms), clearTimeout: id => window.clearTimeout(id)};
@@ -32,7 +31,6 @@ const hotbarTrigger = new HotbarTrigger({picker, categoryStore});
 
 Hooks.once("init", () => {
   registerSettings(() => hoverDisplay.refresh());
-  preloadTemplates([TEMPLATES.GALLERY_SHEET]);
   picker.loadTemplate();
   hoverDisplay.activateMoveKey();
   // The command of every shortcut macro calls this (hotbar-trigger.mjs).

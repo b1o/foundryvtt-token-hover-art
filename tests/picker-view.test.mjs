@@ -25,8 +25,10 @@ const facts = {
 
 test("each gallery path becomes a tile that marks the selection and the video files", () => {
   assert.deepEqual(buildPickerView(facts).images.slice(0, 2), [
-    {path: "art/goblin%20angry.webp", name: "goblin angry.webp", isVideo: false, active: false},
-    {path: "art/goblin-idle.webm", name: "goblin-idle.webm", isVideo: true, active: true}
+    {path: "art/goblin%20angry.webp", tileKey: "asset:art/goblin%20angry.webp", name: "goblin angry.webp",
+      isVideo: false, active: false},
+    {path: "art/goblin-idle.webm", tileKey: "asset:art/goblin-idle.webm", name: "goblin-idle.webm", isVideo: true,
+      active: true}
   ]);
 });
 
@@ -39,7 +41,7 @@ test("a token without hover art has no selection", () => {
 test("the root shows the top categories and the assets that are in no category", () => {
   const view = buildPickerView({...facts, tree: buildTree(categories, paths), selectedPath: "art/goblin%20angry.webp"});
   assert.equal(view.isRoot, true);
-  assert.deepEqual(view.categories, [{id: "moods", name: "Moods", containsSelection: true}]);
+  assert.deepEqual(view.categories, [{id: "moods", tileKey: "category:moods", name: "Moods", containsSelection: true}]);
   assert.deepEqual(view.images.map(image => image.name), ["goblin-idle.webm", "goblin-calm.png"]);
   assert.deepEqual(view.breadcrumb, [{id: "", name: null, isRoot: true, isCurrent: true}]);
 });

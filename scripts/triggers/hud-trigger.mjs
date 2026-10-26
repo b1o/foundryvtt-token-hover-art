@@ -2,7 +2,7 @@ import { getTokenHudColumn, findByUuid, getTokenScreenRect } from "../compat.mjs
 import { log } from "../output.mjs";
 import { areHotbarShortcutsEnabled } from "../settings.mjs";
 import { createShortcutPayload } from "../decisions/shortcut-payload.mjs";
-import { isPointerClick } from "../keyboard-focus.mjs";
+import { isPointerClick, releaseFocusAfterPointerClick, releaseFocusOnDragStart } from "../keyboard-focus.mjs";
 
 /*
  * The Token HUD trigger point: a button in the left column of the HUD that opens the gallery picker for the HUD
@@ -97,8 +97,8 @@ export class HudTrigger {
       getTokenRect: () => this.#getTokenRect(tokenUuid),
       source: "hud"
     });
-    if ( isPointerClick(event) ) event.currentTarget.blur();
-    else this.#picker.focusSelection();
+    releaseFocusAfterPointerClick(event, event.currentTarget);
+    if ( !isPointerClick(event) ) this.#picker.focusSelection();
   }
 
   /**
@@ -134,13 +134,12 @@ export class HudTrigger {
 }
 
 /**
- * Start a drag of a gallery shortcut. The pointer press focused the button, and a drag ends in no click, so the focus
- * goes away here (the v11 keybinding trap, see keyboard-focus.mjs).
+ * Start a drag of a gallery shortcut.
  * @param {DragEvent} event
  * @param {string} tokenUuid
  */
 function onDragStart(event, tokenUuid) {
   event.dataTransfer.setData("text/plain", JSON.stringify(createShortcutPayload({kind: "gallery", tokenUuid})));
   event.dataTransfer.effectAllowed = "copy";
-  event.currentTarget.blur();
+  releaseFocusOnDragStart(event.currentTarget);
 }

@@ -35,16 +35,6 @@ export function getCompiledTemplate(path) {
 }
 
 /**
- * Load and compile several Handlebars templates.
- * @param {string[]} paths
- * @returns {Promise<Function[]>}
- */
-export function preloadTemplates(paths) {
-  const fn = foundry.applications?.handlebars?.loadTemplates ?? loadTemplates;
-  return fn(paths);
-}
-
-/**
  * @param {string} path
  * @returns {boolean}  Is the path a video file? v13 moved VideoHelper to foundry.helpers.media.
  */

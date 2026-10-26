@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  getBesideTrigger, getViewportCenter, keepInViewport, clampPickerSize, DEFAULT_PICKER_SIZE, PICKER_SIZE_LIMITS
+  getBesideTrigger, getViewportCenter, clampPickerSize, DEFAULT_PICKER_SIZE, PICKER_SIZE_LIMITS
 } from "../scripts/decisions/picker-placement.mjs";
 
 const viewport = {width: 1000, height: 800};
@@ -17,19 +17,6 @@ test("the default place is not clamped, so an offset keeps its meaning near an e
 
 test("the hotbar default place has its center on the viewport center", () => {
   assert.deepEqual(getViewportCenter({width: 300, height: 200}, viewport), {left: 350, top: 300});
-});
-
-test("the last step keeps a position inside the viewport, and a large picker starts at the top-left corner", () => {
-  assert.deepEqual(keepInViewport(rect(-208, 750, 300, 200), viewport), {left: 0, top: 600});
-  assert.deepEqual(keepInViewport(rect(400, 200, 1200, 900), viewport), {left: 0, top: 0});
-});
-
-test("a picker without a trigger keeps its position when it is inside the viewport", () => {
-  assert.deepEqual(keepInViewport(rect(100.4, 50, 300, 200), viewport), {left: 100, top: 50});
-});
-
-test("a picker without a trigger moves back inside a smaller viewport", () => {
-  assert.deepEqual(keepInViewport(rect(900, 700, 300, 200), viewport), {left: 700, top: 600});
 });
 
 test("a stored size is rounded and kept inside the limits", () => {

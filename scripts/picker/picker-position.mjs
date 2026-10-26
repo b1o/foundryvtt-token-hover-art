@@ -1,5 +1,6 @@
 import { getPickerOffsets, setPickerOffset } from "../settings.mjs";
-import { getBesideTrigger, getViewportCenter, keepInViewport } from "../decisions/picker-placement.mjs";
+import { getBesideTrigger, getViewportCenter } from "../decisions/picker-placement.mjs";
+import { getViewportSize, placeInViewport } from "../viewport.mjs";
 import { getTokenCenterY, toOffset, fromOffset } from "../decisions/picker-offsets.mjs";
 
 /*
@@ -25,14 +26,11 @@ export class PickerPosition {
    */
   apply(picker, context) {
     const rect = picker.getBoundingClientRect();
-    const viewport = {width: window.innerWidth, height: window.innerHeight};
-    const base = getDefaultPlace(context, rect, viewport);
+    const base = getDefaultPlace(context, rect);
     const offset = getPickerOffsets()[context.positionReference];
     let target = rect;
     if ( base ) target = offset ? fromOffset(offset, base) : base;
-    const {left, top} = keepInViewport({...target, width: rect.width, height: rect.height}, viewport);
-    picker.style.left = `${left}px`;
-    picker.style.top = `${top}px`;
+    placeInViewport(picker, {...target, width: rect.width, height: rect.height});
   }
 
   /**
@@ -50,7 +48,7 @@ export class PickerPosition {
    * @returns {Promise<boolean>}  Was the position saved? It needs the trigger on the screen.
    */
   async save(rect, context) {
-    const base = getDefaultPlace(context, rect, {width: window.innerWidth, height: window.innerHeight});
+    const base = getDefaultPlace(context, rect);
     if ( !base ) return false;
     await setPickerOffset(context.positionReference, toOffset(rect, base));
     return true;
@@ -68,13 +66,12 @@ export class PickerPosition {
 /**
  * @param {PickerContext} context
  * @param {{width: number, height: number}} size  The picker size.
- * @param {{width: number, height: number}} viewport
  * @returns {{left: number, top: number}|null}  The default place now, not clamped: the viewport center, or left of the
  *                                             trigger and centered on the token or on the trigger. Null if the
  *                                             trigger is gone.
  */
-function getDefaultPlace(context, size, viewport) {
-  if ( context.placement === "center" ) return getViewportCenter(size, viewport);
+function getDefaultPlace(context, size) {
+  if ( context.placement === "center" ) return getViewportCenter(size, getViewportSize());
   const anchor = context.getAnchorRect();
   if ( !anchor ) return null;
   const token = (context.positionReference === "token") ? context.getTokenRect() : null;

@@ -1,4 +1,5 @@
-import { clampPickerSize, keepInViewport } from "../decisions/picker-placement.mjs";
+import { clampPickerSize } from "../decisions/picker-placement.mjs";
+import { moveInViewport } from "../viewport.mjs";
 import { runPointerDrag } from "../pointer-drag.mjs";
 import { getPickerSize, setPickerSize } from "../settings.mjs";
 import { reportActionError } from "../output.mjs";
@@ -92,12 +93,7 @@ function runPickerMove(event, picker, onEnd) {
   event.preventDefault();
   const start = picker.getBoundingClientRect();
   runPointerDrag(event.target.closest(".tha-picker-header"), event, {
-    onMove: (dx, dy) => {
-      const moved = {left: start.left + dx, top: start.top + dy, width: start.width, height: start.height};
-      const {left, top} = keepInViewport(moved, {width: window.innerWidth, height: window.innerHeight});
-      picker.style.left = `${left}px`;
-      picker.style.top = `${top}px`;
-    },
+    onMove: (dx, dy) => moveInViewport(picker, start, dx, dy),
     onEnd: isMoved => {
       if ( isMoved ) onEnd(picker.getBoundingClientRect());
     }

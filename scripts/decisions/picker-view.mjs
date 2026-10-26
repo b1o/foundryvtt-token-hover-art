@@ -1,4 +1,5 @@
 import { getHolderIds } from "./category-tree.mjs";
+import { assetKey, categoryKey } from "./tile-marks.mjs";
 
 /*
  * The template data of the gallery picker. No Foundry access: the picker collects the facts and passes them in.
@@ -31,6 +32,7 @@ export function buildPickerView(facts) {
   const paths = isRoot ? tree.rootPaths : tree.nodes[categoryId].paths;
   const categories = categoryIds.map(id => ({
     id,
+    tileKey: categoryKey(id),
     name: tree.nodes[id].name,
     containsSelection: holderIds.includes(id)
   }));
@@ -50,6 +52,7 @@ export function buildPickerView(facts) {
     categories,
     images: paths.map(path => ({
       path,
+      tileKey: assetKey(path),
       name: getFileName(path),
       isVideo: isVideo(path),
       active: path === selectedPath

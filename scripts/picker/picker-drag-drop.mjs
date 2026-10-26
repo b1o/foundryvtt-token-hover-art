@@ -1,3 +1,5 @@
+import { releaseFocusOnDragStart } from "../keyboard-focus.mjs";
+
 /*
  * The drag sources and the drop targets of the gallery picker (HTML5 drag and drop). A source has data-tha-drag, a
  * target has data-tha-drop and data-category-id (empty for the root).
@@ -60,9 +62,7 @@ export class PickerDragDrop {
     const drag = this.#getDrag(source);
     if ( !drag ) return event.preventDefault();
     this.#drag = drag;
-    // The pointer press focused the tile button, and a drag ends in no click, so no click handler gives the focus back.
-    // Only a pointer starts a drag, so the focus goes away here (the v11 keybinding trap, see keyboard-focus.mjs).
-    if ( source.contains(document.activeElement) ) document.activeElement.blur();
+    releaseFocusOnDragStart(source);
     event.dataTransfer.setData("text/plain", JSON.stringify(drag.payload));
     event.dataTransfer.effectAllowed = "copyMove";
   }

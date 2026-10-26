@@ -39,10 +39,6 @@ import { PickerTiles } from "./picker-tiles.mjs";
  * @property {"hud"|"hotbar"} source                Which trigger point opened the picker.
  */
 
-/**
- * @typedef {import("../data/category-store.mjs").CategoryScope} CategoryScope
- */
-
 const STATES = Object.freeze({CLOSED: "closed", OPEN: "open"});
 
 /** The actions of a click on a tile itself. A Ctrl or Shift click on a tile marks it instead (picker-marks.mjs). */
@@ -91,6 +87,9 @@ export class GalleryPicker {
   /** @type {PickerCategories} */
   #categories;
 
+  /** @type {import("../data/category-store.mjs").CategoryStore} */
+  #categoryStore;
+
   /**
    * @param {object} options
    * @param {function(string): (TokenDocument|null)} options.resolveToken  Finds a token by its UUID.
@@ -103,6 +102,7 @@ export class GalleryPicker {
     this.#openManager = openManager;
     this.#onStateChange = onStateChange;
     this.#categories = new PickerCategories({store: categoryStore});
+    this.#categoryStore = categoryStore;
   }
 
   /**
@@ -286,7 +286,7 @@ export class GalleryPicker {
     const tokenDoc = this.#resolveToken(this.#context.tokenUuid);
     if ( !tokenDoc?.isOwner ) return this.close();
     const actor = tokenDoc.actor;
-    const scope = this.#getScope(tokenDoc);
+    const scope = this.#categoryStore.scopeOf(tokenDoc);
     const categories = this.#categories.read(scope, getGallery(actor), this.#categoryId);
     this.#categoryId = categories.categoryId;
     const view = buildPickerView({
@@ -304,14 +304,6 @@ export class GalleryPicker {
     });
     this.#shell.render(view, game.i18n.format("TOKEN_HOVER_ART.Picker.Title", {name: tokenDoc.name}));
     this.#tiles.syncMarks();
-  }
-
-  /**
-   * @param {TokenDocument} tokenDoc
-   * @returns {CategoryScope}  The categories of the current user for the gallery of the token.
-   */
-  #getScope(tokenDoc) {
-    return {userId: game.user.id, actorId: getBaseActor(tokenDoc.actor)?.id ?? null};
   }
 
   #place() {
@@ -390,7 +382,7 @@ export class GalleryPicker {
     if ( !tokenDoc ) return null;
     return {
       tokenUuid: tokenDoc.uuid,
-      scope: this.#getScope(tokenDoc),
+      scope: this.#categoryStore.scopeOf(tokenDoc),
       categoryId: this.#categoryId,
       paths: getGallery(tokenDoc.actor)
     };
@@ -418,7 +410,7 @@ export class GalleryPicker {
     releaseFocusAfterPointerClick(event, button);
     const tokenDoc = this.#resolveToken(this.#context.tokenUuid);
     if ( !tokenDoc ) return this.close();
-    const scope = this.#getScope(tokenDoc);
+    const scope = this.#categoryStore.scopeOf(tokenDoc);
     const action = button.dataset.thaAction;
     if ( TILE_ACTIONS.includes(action) && this.#tiles.isMarkClick(event, button) ) return;
     try {
