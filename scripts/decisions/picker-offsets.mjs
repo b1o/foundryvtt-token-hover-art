@@ -30,10 +30,10 @@ const OFFSET_BASE = "default";
 
 /**
  * @param {import("./screen-geometry.mjs").Rect} token  The token rectangle on the screen.
- * @returns {{x: number, y: number}}  The token center. The picker from the HUD has its vertical center there.
+ * @returns {number}  The height of the token center. The picker from the HUD has its vertical center there.
  */
-export function getTokenCenter(token) {
-  return {x: token.left + (token.width / 2), y: token.top + (token.height / 2)};
+export function getTokenCenterY(token) {
+  return token.top + (token.height / 2);
 }
 
 /**

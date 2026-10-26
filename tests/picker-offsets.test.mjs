@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { getTokenCenter, toOffset, fromOffset, isOffset } from "../scripts/decisions/picker-offsets.mjs";
+import { getTokenCenterY, toOffset, fromOffset, isOffset } from "../scripts/decisions/picker-offsets.mjs";
 
 const rect = (left, top, width, height) => ({left, top, width, height, right: left + width, bottom: top + height});
 
-test("the token center is the center of the token rectangle", () => {
-  assert.deepEqual(getTokenCenter(rect(300, 200, 100, 60)), {x: 350, y: 230});
+test("the token center height is the middle of the token rectangle", () => {
+  assert.equal(getTokenCenterY(rect(300, 200, 100, 60)), 230);
 });
 
 test("an offset keeps the picker at the same distance from its default place", () => {

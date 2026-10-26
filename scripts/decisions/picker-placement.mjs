@@ -54,22 +54,12 @@ export function getViewportCenter(size, viewport) {
  * Keep a picker position inside the viewport. The last step of every placement.
  * @param {import("./screen-geometry.mjs").Rect} rect  The screen rectangle of the picker now.
  * @param {import("./screen-geometry.mjs").Size} viewport
- * @returns {{left: number, top: number}}
+ * @returns {{left: number, top: number}}  The position, rounded, with the whole rectangle inside the viewport. A
+ *                                         rectangle larger than the viewport starts at the top-left corner.
  */
-export function keepInViewport(rect, viewport) {
-  return clampToViewport(rect, rect, viewport);
-}
-
-/**
- * @param {{left: number, top: number}} position
- * @param {import("./screen-geometry.mjs").Size} size
- * @param {import("./screen-geometry.mjs").Size} viewport
- * @returns {{left: number, top: number}}  The position, rounded, with the whole size inside the viewport. A size
- *                                         larger than the viewport starts at the top-left corner.
- */
-function clampToViewport({left, top}, size, viewport) {
+export function keepInViewport({left, top, width, height}, viewport) {
   return {
-    left: Math.round(clamp(left, 0, Math.max(viewport.width - size.width, 0))),
-    top: Math.round(clamp(top, 0, Math.max(viewport.height - size.height, 0)))
+    left: Math.round(clamp(left, 0, Math.max(viewport.width - width, 0))),
+    top: Math.round(clamp(top, 0, Math.max(viewport.height - height, 0)))
   };
 }

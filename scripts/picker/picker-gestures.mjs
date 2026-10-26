@@ -88,7 +88,7 @@ export class PickerGestures {
  * @param {HTMLElement} picker       The picker root element.
  * @param {function(DOMRect): void} onEnd  Called with the final rectangle, only after a real drag (not a click).
  */
-export function runPickerMove(event, picker, onEnd) {
+function runPickerMove(event, picker, onEnd) {
   event.preventDefault();
   const start = picker.getBoundingClientRect();
   runPointerDrag(event.target.closest(".tha-picker-header"), event, {
@@ -113,7 +113,7 @@ export function runPickerMove(event, picker, onEnd) {
  * @param {function({width: number, height: number}, DOMRect): void} options.onEnd  Called with the final grid size
  *                                                       and the final rectangle, only after a real drag.
  */
-export function runPickerResize(event, picker, {startSize, onEnd}) {
+function runPickerResize(event, picker, {startSize, onEnd}) {
   event.preventDefault();
   const fixedRight = picker.getBoundingClientRect().right;
   let size = startSize;

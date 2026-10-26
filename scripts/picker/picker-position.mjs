@@ -1,6 +1,6 @@
 import { getPickerOffsets, setPickerOffset } from "../settings.mjs";
 import { getBesideTrigger, getViewportCenter, keepInViewport } from "../decisions/picker-placement.mjs";
-import { getTokenCenter, toOffset, fromOffset } from "../decisions/picker-offsets.mjs";
+import { getTokenCenterY, toOffset, fromOffset } from "../decisions/picker-offsets.mjs";
 
 /*
  * Where the gallery picker is. The trigger gives the default place (picker-placement.mjs): left of the Token HUD
@@ -78,6 +78,6 @@ function getDefaultPlace(context, size, viewport) {
   const anchor = context.getAnchorRect();
   if ( !anchor ) return null;
   const token = (context.positionReference === "token") ? context.getTokenRect() : null;
-  const centerY = token ? getTokenCenter(token).y : (anchor.top + (anchor.height / 2));
+  const centerY = token ? getTokenCenterY(token) : (anchor.top + (anchor.height / 2));
   return getBesideTrigger(anchor, centerY, size);
 }
