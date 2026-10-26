@@ -1,19 +1,19 @@
 import { TEMPLATES } from "../constants.mjs";
 import { areHotbarShortcutsEnabled } from "../settings.mjs";
 import {
-  getGallery, getSelectedArt, applyAsset, isSecret, setSecret, canManageGallery, getBaseActor, hasModuleFlagChange,
-  isVideo
+  getGallery, getSelectedArt, applyAsset, isSecret, setSecret, canManageGallery, getBaseActor, hasModuleFlagChange
 } from "../data/gallery-data.mjs";
 import { buildPickerView } from "../decisions/picker-view.mjs";
-import { getCompiledTemplate } from "../compat.mjs";
+import { getCompiledTemplate, hasVideoExtension } from "../compat.mjs";
 import { log, notify, reportActionError } from "../output.mjs";
 import { releaseFocusAfterPointerClick } from "../keyboard-focus.mjs";
 import { PickerGestures } from "./picker-gestures.mjs";
 import { OpenPickerListeners } from "./open-picker-listeners.mjs";
-import { PickerPosition } from "./picker-position.mjs";
+import { placePicker, isPickerMoved, resetPickerPosition } from "./picker-position.mjs";
 import { PickerShell } from "./picker-shell.mjs";
 import { PickerCategories } from "./picker-categories.mjs";
 import { PickerTiles } from "./picker-tiles.mjs";
+import { PickerMarks, getTileKey } from "./picker-marks.mjs";
 
 /*
  * The gallery picker: the popover where a user selects the hover art of one token. A trigger point opens it with a
@@ -58,7 +58,10 @@ export class GalleryPicker {
   /** The page elements. They are created at the first open. @type {PickerShell|null} */
   #shell = null;
 
-  /** The marks, the drag and drop, and the tile menus. @type {PickerTiles|null} */
+  /** The marked tiles. @type {PickerMarks|null} */
+  #marks = null;
+
+  /** The drag and drop and the tile menus. @type {PickerTiles|null} */
   #tiles = null;
 
   /** @type {OpenPickerListeners|null} */
@@ -72,8 +75,6 @@ export class GalleryPicker {
 
   /** Is a placement already scheduled for the end of the current task? */
   #isPlacementScheduled = false;
-
-  #position = new PickerPosition();
 
   /** @type {function(string): (TokenDocument|null)} */
   #resolveToken;
@@ -261,7 +262,7 @@ export class GalleryPicker {
       shell.hide();
       this.#listeners.stop();
     }
-    this.#tiles.clearMarks();
+    this.#marks.clear();
     this.#onStateChange();
   }
 
@@ -271,7 +272,7 @@ export class GalleryPicker {
    */
   #navigate(categoryId) {
     this.#categoryId = categoryId;
-    this.#tiles.clearMarks();
+    this.#marks.clear();
     this.#render();
     this.#shell.scrollToTop();
     this.#place();
@@ -298,16 +299,16 @@ export class GalleryPicker {
       isSecret: isSecret(tokenDoc),
       isGM: game.user.isGM,
       canManage: canManageGallery(actor, game.user),
-      isMoved: this.#position.isMoved(this.#context),
+      isMoved: isPickerMoved(this.#context),
       canDragToHotbar: areHotbarShortcutsEnabled(),
-      isVideo
+      isVideo: hasVideoExtension
     });
     this.#shell.render(view, game.i18n.format("TOKEN_HOVER_ART.Picker.Title", {name: tokenDoc.name}));
-    this.#tiles.syncMarks();
+    this.#marks.sync();
   }
 
   #place() {
-    this.#position.apply(this.#shell.element, this.#context);
+    placePicker(this.#shell.element, this.#context);
   }
 
   /**
@@ -315,7 +316,7 @@ export class GalleryPicker {
    */
   async #resetPosition() {
     const context = this.#context;
-    await this.#position.reset(context);
+    await resetPickerPosition(context);
     if ( this.#context !== context ) return;
     this.#render();
     this.#place();
@@ -338,7 +339,7 @@ export class GalleryPicker {
    */
   #onEscape() {
     if ( this.#shell.menu.isOpen() ) this.#shell.menu.close();
-    else if ( this.#tiles.hasMarks() ) this.#tiles.clearMarks();
+    else if ( this.#marks.hasMarks() ) this.#marks.clear();
     else this.close();
   }
 
@@ -351,16 +352,16 @@ export class GalleryPicker {
     const element = shell.element;
     const gestures = new PickerGestures({
       picker: element,
-      position: this.#position,
       getContext: () => this.#context,
       onMoveSaved: () => this.#render()
     });
     element.addEventListener("click", event => this.#onClick(event));
     element.addEventListener("pointerdown", event => this.#onPointerDown(event, gestures));
     this.#shell = shell;
+    this.#marks = new PickerMarks({getContent: () => shell.content});
     this.#tiles = new PickerTiles({
       root: element,
-      getContent: () => shell.content,
+      marks: this.#marks,
       categories: this.#categories,
       getTileScope: () => this.#getTileScope()
     });
@@ -412,7 +413,7 @@ export class GalleryPicker {
     if ( !tokenDoc ) return this.close();
     const scope = this.#categoryStore.scopeOf(tokenDoc);
     const action = button.dataset.thaAction;
-    if ( TILE_ACTIONS.includes(action) && this.#tiles.isMarkClick(event, button) ) return;
+    if ( TILE_ACTIONS.includes(action) && this.#marks.onTileClick(event, getTileKey(button)) ) return;
     try {
       switch ( action ) {
         case "select": return await applyAsset(tokenDoc, button.dataset.path);

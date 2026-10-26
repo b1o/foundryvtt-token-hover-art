@@ -92,7 +92,7 @@ export class PickerCategories {
    * @param {string|null} targetId
    */
   drop(scope, items, targetId) {
-    this.#getCommands(scope).moveItems(items, targetId);
+    this.#run(this.#store.moveItems(scope, items, targetId));
   }
 
   /**

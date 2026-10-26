@@ -100,3 +100,11 @@ export class PickerMarks {
     return [...this.#getContent().querySelectorAll("[data-tha-tile-key]")];
   }
 }
+
+/**
+ * @param {HTMLElement} element  A tile or an element in a tile.
+ * @returns {string|null}  The tile key, or null for a tile that cannot be marked or moved ("No hover art").
+ */
+export function getTileKey(element) {
+  return element.closest("[data-tha-tile-key]")?.dataset.thaTileKey ?? null;
+}

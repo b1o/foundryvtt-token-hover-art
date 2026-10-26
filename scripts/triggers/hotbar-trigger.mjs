@@ -1,10 +1,10 @@
 import { MODULE_ID, FLAGS } from "../constants.mjs";
 import { areHotbarShortcutsEnabled } from "../settings.mjs";
-import { applyAsset, isVideo } from "../data/gallery-data.mjs";
+import { applyAsset } from "../data/gallery-data.mjs";
 import { getAncestors, isLocation } from "../decisions/category-tree.mjs";
 import { isShortcutDrop, readShortcut, isSameShortcut, joinNameParts } from "../decisions/shortcut-payload.mjs";
 import { getFileName } from "../decisions/picker-view.mjs";
-import { findByUuid, isHotbarLocked } from "../compat.mjs";
+import { findByUuid, isHotbarLocked, hasVideoExtension } from "../compat.mjs";
 import { notify, reportActionError } from "../output.mjs";
 
 /*
@@ -188,5 +188,5 @@ function getIcon(shortcut, tokenDoc) {
  */
 function toIconImage(path, fallback) {
   if ( !path ) return fallback;
-  return isVideo(path) ? ICONS.VIDEO : path;
+  return hasVideoExtension(path) ? ICONS.VIDEO : path;
 }

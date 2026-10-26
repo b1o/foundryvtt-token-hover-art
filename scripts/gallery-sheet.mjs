@@ -2,9 +2,9 @@ import { MODULE_ID, TEMPLATES } from "./constants.mjs";
 import { getDefaultFilter } from "./settings.mjs";
 import {
   getBaseActor, canManageGallery, getManualImages, setManualImages, getFolderSources, getDefaultArt, setDefaultArt,
-  clearDefaultArt, isDefaultSecret, setDefaultSecret, isVideo
+  clearDefaultArt, isDefaultSecret, setDefaultSecret
 } from "./data/gallery-data.mjs";
-import { getDocumentSheetClass, getFilePickerClass } from "./compat.mjs";
+import { getDocumentSheetClass, getFilePickerClass, hasVideoExtension } from "./compat.mjs";
 import { notify, reportActionError } from "./output.mjs";
 
 /**
@@ -81,7 +81,7 @@ export class HoverArtGallery extends getDocumentSheetClass() {
   getData() {
     const actor = this.document;
     const defaultArt = getDefaultArt(actor);
-    const toImage = path => ({path, isVideo: isVideo(path), isDefault: path === defaultArt});
+    const toImage = path => ({path, isVideo: hasVideoExtension(path), isDefault: path === defaultArt});
     const manual = getManualImages(actor);
     // The core file browser and the folder scan need the same permission.
     const canBrowse = this.#folderSources.canScan();

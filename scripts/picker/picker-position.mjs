@@ -17,50 +17,47 @@ import { getTokenCenterY, toOffset, fromOffset } from "../decisions/picker-offse
  * @typedef {import("./gallery-picker.mjs").PickerContext} PickerContext
  */
 
-export class PickerPosition {
+/**
+ * Put the picker where it belongs now. If the trigger is gone, the picker only stays inside the viewport.
+ * @param {HTMLElement} picker
+ * @param {PickerContext} context
+ */
+export function placePicker(picker, context) {
+  const rect = picker.getBoundingClientRect();
+  const base = getDefaultPlace(context, rect);
+  const offset = getPickerOffsets()[context.positionReference];
+  let target = rect;
+  if ( base ) target = offset ? fromOffset(offset, base) : base;
+  placeInViewport(picker, {...target, width: rect.width, height: rect.height});
+}
 
-  /**
-   * Put the picker where it belongs now. If the trigger is gone, the picker only stays inside the viewport.
-   * @param {HTMLElement} picker
-   * @param {PickerContext} context
-   */
-  apply(picker, context) {
-    const rect = picker.getBoundingClientRect();
-    const base = getDefaultPlace(context, rect);
-    const offset = getPickerOffsets()[context.positionReference];
-    let target = rect;
-    if ( base ) target = offset ? fromOffset(offset, base) : base;
-    placeInViewport(picker, {...target, width: rect.width, height: rect.height});
-  }
+/**
+ * @param {PickerContext} context
+ * @returns {boolean}  Did the user drag the picker for the reference of this context?
+ */
+export function isPickerMoved(context) {
+  return getPickerOffsets()[context.positionReference] !== null;
+}
 
-  /**
-   * @param {PickerContext} context
-   * @returns {boolean}  Did the user drag the picker for the reference of this context?
-   */
-  isMoved(context) {
-    return getPickerOffsets()[context.positionReference] !== null;
-  }
+/**
+ * Save the place where the user dragged the picker, as an offset from its default place now.
+ * @param {DOMRect} rect  The screen rectangle of the picker.
+ * @param {PickerContext} context
+ * @returns {Promise<boolean>}  Was the position saved? It needs the trigger on the screen.
+ */
+export async function savePickerPosition(rect, context) {
+  const base = getDefaultPlace(context, rect);
+  if ( !base ) return false;
+  await setPickerOffset(context.positionReference, toOffset(rect, base));
+  return true;
+}
 
-  /**
-   * Save the place where the user dragged the picker, as an offset from its default place now.
-   * @param {DOMRect} rect  The screen rectangle of the picker.
-   * @param {PickerContext} context
-   * @returns {Promise<boolean>}  Was the position saved? It needs the trigger on the screen.
-   */
-  async save(rect, context) {
-    const base = getDefaultPlace(context, rect);
-    if ( !base ) return false;
-    await setPickerOffset(context.positionReference, toOffset(rect, base));
-    return true;
-  }
-
-  /**
-   * Go back to the default place, for the reference of the context. The other reference keeps its position.
-   * @param {PickerContext} context
-   */
-  reset(context) {
-    return setPickerOffset(context.positionReference, null);
-  }
+/**
+ * Go back to the default place, for the reference of the context. The other reference keeps its position.
+ * @param {PickerContext} context
+ */
+export function resetPickerPosition(context) {
+  return setPickerOffset(context.positionReference, null);
 }
 
 /**

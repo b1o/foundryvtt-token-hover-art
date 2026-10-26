@@ -1,7 +1,8 @@
 import {
   getHideDelayMs, isHoverArtEnabled, isTokenNameShown, getBackgroundColor, isBorderShown, getBorderWidth, getBorderColor
 } from "../settings.mjs";
-import { getSelectedArt, canViewArt, isVideo } from "../data/gallery-data.mjs";
+import { getSelectedArt, canViewArt } from "../data/gallery-data.mjs";
+import { hasVideoExtension } from "../compat.mjs";
 import { canSeeNameOnHover } from "../decisions/gallery-rules.mjs";
 import { log } from "../output.mjs";
 import { MODULE_ID } from "../constants.mjs";
@@ -208,7 +209,7 @@ export class HoverDisplay {
    */
   #createMedia(path) {
     let media;
-    if ( isVideo(path) ) {
+    if ( hasVideoExtension(path) ) {
       media = document.createElement("video");
       Object.assign(media, {autoplay: true, loop: true, muted: true, playsInline: true});
     }
@@ -257,7 +258,7 @@ export class HoverDisplay {
    */
   #preloadToken(tokenDoc) {
     const path = getViewableArt(tokenDoc);
-    if ( !path || this.#preloaded.has(path) || isVideo(path) ) return;
+    if ( !path || this.#preloaded.has(path) || hasVideoExtension(path) ) return;
     this.#preloaded.add(path);
     const img = new Image();
     img.src = path;

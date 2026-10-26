@@ -1,7 +1,6 @@
 import { MODULE_ID, FLAGS } from "../constants.mjs";
 import { mayOwnersManageGallery } from "../settings.mjs";
 import { mayManageGallery } from "../decisions/gallery-rules.mjs";
-import { hasVideoExtension } from "../compat.mjs";
 
 /*
  * All reads and writes of the gallery, selection, and secret data go through this file.
@@ -211,12 +210,4 @@ export function isDefaultSecret(actor) {
  */
 export function setDefaultSecret(actor, secret) {
   return getBaseActor(actor).update({[`prototypeToken.flags.${MODULE_ID}.${FLAGS.SECRET}`]: secret});
-}
-
-/**
- * @param {string} path
- * @returns {boolean}  Is the path a video file (webm, mp4, ...)?
- */
-export function isVideo(path) {
-  return hasVideoExtension(path);
 }

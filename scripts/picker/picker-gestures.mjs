@@ -3,6 +3,7 @@ import { moveInViewport } from "../viewport.mjs";
 import { runPointerDrag } from "../pointer-drag.mjs";
 import { getPickerSize, setPickerSize } from "../settings.mjs";
 import { reportActionError } from "../output.mjs";
+import { isPickerMoved, savePickerPosition } from "./picker-position.mjs";
 
 /*
  * The two pointer gestures of the gallery picker: a drag on the header moves it, a drag on the grip resizes it.
@@ -22,9 +23,6 @@ export class PickerGestures {
   /** @type {HTMLElement} */
   #picker;
 
-  /** @type {import("./picker-position.mjs").PickerPosition} */
-  #position;
-
   /** @type {function(): (PickerContext|null)} */
   #getContext;
 
@@ -34,13 +32,11 @@ export class PickerGestures {
   /**
    * @param {object} options
    * @param {HTMLElement} options.picker                 The picker root element.
-   * @param {import("./picker-position.mjs").PickerPosition} options.position
    * @param {function(): (PickerContext|null)} options.getContext  The context of the open picker now.
    * @param {function(): void} options.onMoveSaved      Called after a saved move, if the context did not change.
    */
-  constructor({picker, position, getContext, onMoveSaved}) {
+  constructor({picker, getContext, onMoveSaved}) {
     this.#picker = picker;
-    this.#position = position;
     this.#getContext = getContext;
     this.#onMoveSaved = onMoveSaved;
   }
@@ -67,7 +63,7 @@ export class PickerGestures {
    */
   async #saveMove(rect) {
     const context = this.#getContext();
-    const isSaved = await this.#position.save(rect, context);
+    const isSaved = await savePickerPosition(rect, context);
     if ( isSaved && (this.#getContext() === context) ) this.#onMoveSaved();
   }
 
@@ -79,7 +75,7 @@ export class PickerGestures {
   async #saveResize(size, rect) {
     const context = this.#getContext();
     await setPickerSize(size);
-    if ( this.#position.isMoved(context) ) await this.#position.save(rect, context);
+    if ( isPickerMoved(context) ) await savePickerPosition(rect, context);
   }
 }
 
