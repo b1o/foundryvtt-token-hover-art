@@ -20,7 +20,8 @@ document describes the full feature before the first commit.
 
 1. A shortcut saves the token (TokenDocument UUID), not the Actor.
 2. Categories can contain categories, with no fixed depth limit. The tree is small (tens, not thousands).
-3. GM override: the GM can view and edit the categories of any user.
+3. ~~GM override: the GM can view and edit the categories of any user.~~ Removed by the user on 2026-10-26: each
+   user sees and edits only their own categories.
 4. Categories belong to one Actor gallery and one user.
 5. An asset is in at most one category of a user (folder behavior).
 6. Shortcuts are Macro documents. The module settings explain the macro permission that players need.
@@ -89,7 +90,10 @@ must open it for a token that is not selected or not on the viewed scene. So the
 - **Permission:** the picker opens only if the current user owns the token (`tokenDoc.isOwner`). The server also
   checks each update.
 - **Accessibility:** assets, categories, and header actions are `<button type="button">` with localized names.
-  Each tile has a menu button with "Move to…" and "Add to hotbar", so every drag has a keyboard path (rule 9.3).
+  A category tile has a menu button with "Rename" and "Delete". Decision (user, 2026-10-26): a move and a hotbar
+  shortcut are drag and drop only, with no keyboard path for now (temporary exception in rule 9.3). All other
+  actions stay keyboard reachable: create, rename, delete, open a category, and the breadcrumb. The marks
+  (multi-select) exist only for a drag, so they have no keyboard path either.
 - **Videos:** only the tiles of the current category are in the DOM. Their videos play while the picker is open
   and stop when it closes or changes category.
 - **Size:** the existing resize grip and the `paletteSize` client setting stay. The grip moves to the corner that
@@ -98,7 +102,7 @@ must open it for a token that is not selected or not on the viewed scene. So the
 ### Picker layout
 
 ```
-┌ Hover art: <token name> ─────── [user ▾] [eye] [gear] [x] ┐   user ▾: GM only (section 6.5)
+┌ Hover art: <token name> ──────────────── [eye] [gear] [x] ┐
 │ Root › Moods › Angry                         [+ category] │   breadcrumb: each part is a drop target
 │ [▢ Calm] [▢ Happy]                                        │   sub-categories of the current category
 │ [∅ none] [img] [img] [img] [img]                          │   assets of the current category
@@ -180,7 +184,7 @@ flags.token-hover-art.categories.<baseActorId>.<categoryId> = {
 - A flat map with `parentId` is the storage. The tree is built from it on read. A flat map allows narrow updates
   of one category (rule 4.1), and a move cannot create two copies of a subtree.
 - `categoryId` comes from `foundry.utils.randomID()`. Asset paths contain dots, so paths are values, never keys.
-- A player can update their own User document; the GM can update every user (`common/documents/user.mjs:205`).
+- Every user can update their own User document (`common/documents/user.mjs:205`).
 - Every client receives these flags (rule 4.3). Category names are not secret.
 
 ### 6.2 Rules (pure functions in `category-tree.mjs`)
@@ -193,6 +197,7 @@ flags.token-hover-art.categories.<baseActorId>.<categoryId> = {
 | `planMoveAsset(map, path, targetId)` | The narrow update: remove the path from its old category, add it to the target (or to none for the root). |
 | `planMoveCategory(map, id, targetParentId)` | Refused if the target is the category or one of its descendants. |
 | `planDeleteCategory(map, id)` | Deletes the category and its descendants. Their assets go back to the root of the gallery (an asset is never deleted by a category action). |
+| `planMoveItems(map, {paths, categoryIds}, targetId)` | Several moves in one patch (multi-select, 6.4). Refused if the target is a moved category or below one. |
 
 `buildTree` runs on every read, so invalid stored data never reaches the UI (rules 3.2 and 7.4).
 
@@ -204,7 +209,8 @@ writes only the changed category keys, with `-=` keys for deletions. It serializ
 ### 6.4 Picker interaction
 
 - **Create:** the "+ category" button creates a category in the current category, with an inline name field.
-- **Rename and delete:** in the tile menu. Delete asks for a confirmation if the category has content.
+- **Rename and delete:** in the menu of a category tile. Delete asks for a confirmation if the category has
+  content. Asset tiles have no menu.
 - **Open:** a click on a category tile. The breadcrumb goes back.
 - **Drag and drop** (HTML5 drag and drop, one payload format for the picker and the hotbar, section 7.2):
 
@@ -214,15 +220,30 @@ writes only the changed category keys, with `-=` keys for deletions. It serializ
 | Asset | Breadcrumb part | Asset moves into that category, or to the root. |
 | Category | Category tile | Category moves into it (cycle refused). |
 | Category | Breadcrumb part | Category moves there. |
-| Asset, category, header handle | Hotbar slot | Creates a shortcut (section 7). |
+| Asset, category, HUD button | Hotbar slot | Creates a shortcut (section 7). |
 
 - **Order:** categories sort by `sort`, then by name. Assets keep the gallery order.
+- **Multi-select** (user request, 2026-10-26; no box selection). The code calls a multi-selected tile "marked",
+  because "selection" already means the hover art of a token.
+  - A plain click keeps its function (an asset sets the hover art, a category opens) and clears the marks.
+  - Ctrl+click (Cmd+click on macOS) marks a tile or removes its mark. Shift+click marks the range from the anchor
+    (the tile of the last plain click or Ctrl+click) to the clicked tile, and replaces the marks. Ctrl+Shift+click
+    adds the range. Only a pointer click marks: a click from the keyboard (for example Shift+Enter) is a plain
+    click. After a pointer click no element keeps the focus (section 4), so Ctrl+arrow keys pan the canvas, as in
+    core.
+  - Asset tiles and category tiles can be marked together. "No hover art" cannot be marked, and a Ctrl or Shift
+    click on it does nothing.
+  - Only tiles of the shown category can be marked. A navigation and a close
+    clear the marks. Escape clears them before it closes the picker (popup, then marks, then picker).
+  - A drag of a marked tile moves all marked tiles. A drag of a tile that is not marked moves only that tile.
+    Rename and delete stay single.
+  - A move of several tiles is one write (`planMoveItems`). A target that is a moved category, or that is below
+    one, is refused for the full move. A tile that is already at the target is skipped.
+  - A hotbar drop (phase D) uses only the dragged tile.
 
-### 6.5 GM override
+### 6.5 GM override (removed)
 
-- For a GM, the picker header shows a user selector. The default is the GM. The GM can select any user and then
-  views and edits that user's categories with the same UI.
-- The selector is not shown to players.
+Removed by the user on 2026-10-26. The picker always shows the categories of the current user, also for a GM.
 
 ## 7. Hotbar trigger point
 
@@ -252,8 +273,8 @@ writes only the changed category keys, with `-=` keys for deletions. It serializ
 }
 ```
 
-Drag sources: the picker header handle and the HUD button (kind `gallery`), a category tile, and an asset tile
-(including "No hover art").
+Drag sources: the HUD button (kind `gallery`), a category tile, and an asset tile (including "No hover art").
+Decision (user, 2026-10-26): the picker header is not a drag source; it stays the move handle of phase B.
 
 ### 7.3 Shortcut macro
 
@@ -263,7 +284,7 @@ Drag sources: the picker header handle and the HUD button (kind `gallery`), a ca
 - Name: `Hover art: <token>`, `Hover art: <token> › <category path>`, or `Hover art: <token> › <file name>`.
 - Image: the token image, a folder icon, the asset image (an icon for a video or for "No hover art").
 - Reuse: if the user already has a module macro with the same shortcut flags, the drop reuses it.
-- "Add to hotbar" in a tile menu calls `assignHotbarMacro(macro)` with no slot, which takes the first free slot.
+- A shortcut is made only by a drag (rule 9.3, temporary exception). There is no "Add to hotbar" menu entry.
 
 ### 7.4 `runShortcut(macro)`
 
@@ -304,7 +325,7 @@ The new features change these files, so these fixes come first:
 
 ## 9. Files
 
-Status after phase A: the files without a phase mark exist. The others come in the phase that is named.
+Status after phase C: the files without a phase mark exist. The others come in phase D.
 
 ```
 scripts/
@@ -321,7 +342,7 @@ scripts/
   data/
     gallery-data.mjs           gallery, selection (applyAsset is the only writer), secret, defaults
     folder-sources.mjs         class FolderSources: folder scans, writes one after the other
-    category-store.mjs         C: User flag reads and serialized writes
+    category-store.mjs         User flag reads and serialized writes of the categories
   decisions/                   pure, no Foundry or DOM globals (ESLint enforces this)
     gallery-rules.mjs          who may manage a gallery; token name visibility on hover
     folder-list.mjs            changes to the folder list, applied to the list as it is at the write
@@ -329,14 +350,21 @@ scripts/
     picker-offsets.mjs         dragged position: translation from the token center or the screen origin
     picker-view.mjs            template data of the picker
     screen-geometry.mjs        edges, fractions, clamp (shared by the hover display and the picker)
-    category-tree.mjs          C: tree rules (6.2)
-    shortcut-payload.mjs       D: payload validation and macro naming
+    category-tree.mjs          tree rules (6.2)
+    tile-marks.mjs             multi-select: marks, ranges, the items of a move (6.4)
+    shortcut-payload.mjs       the drag payload (C); D: payload validation and macro naming
   picker/
     gallery-picker.mjs         state, open, close, render, actions
     picker-gestures.mjs        header move and grip resize
     picker-position.mjs        class PickerPosition: dragged or default placement, save and reset per reference
     open-picker-listeners.mjs  page listeners while open: outside press, Escape, window resize
-    picker-drag-drop.mjs       C: drag sources and drop targets in the picker
+    picker-shell.mjs           the page elements: root, rendered content (keeps scroll and focus), popup
+    picker-menu.mjs            class PickerMenu: the popup (menu, choice list, name field, confirmation)
+    picker-menus.mjs           the content of each popup: category menu, name field, user choice
+    picker-categories.mjs      category reads and writes for the picker (through CategoryStore)
+    picker-tiles.mjs           marks and drag and drop together (a drag of a marked tile moves all marks)
+    picker-marks.mjs           class PickerMarks: the marked tiles and their look
+    picker-drag-drop.mjs       drag sources and drop targets in the picker
   triggers/
     hud-trigger.mjs            the HUD button only
     hotbar-trigger.mjs         D: hotbarDrop, runShortcut, macro reuse
@@ -345,6 +373,7 @@ scripts/
     display-layout.mjs         its position and size (class DisplayLayout)
 templates/
   gallery-picker.hbs           replaces hud-palette.hbs
+  picker-menu.hbs              the popup of the picker
   gallery-sheet.hbs
 tests/                         node:test unit tests for decisions/
 ```
@@ -410,3 +439,39 @@ picker in real use.
 | B10 | Drag a corner of the hover display with Ctrl (phase A behavior, shared drag code). | The display moves and resizes as before. |
 | B11 | Reload the page and open the picker from the HUD. | The token slot stays. |
 | B12 | Phase D: drag a picker from the hotbar. | Only the screen slot is saved, as the screen position. A HUD picker keeps its token slot. |
+
+### 11.3 Phase C user flows
+
+Open the picker from the Token HUD with real input, as in 11.1. "Menu" is the menu button of a category tile. A move
+is a drag only (rule 9.3, temporary exception). Each flow that
+writes checks the User flag `flags.token-hover-art.categories.<baseActorId>` after the action.
+
+| # | User action | Expected result |
+|---|---|---|
+| C1 | Click "+ category", type "Moods", press Enter. | A "Moods" category tile shows at the root. The flag has one entry with `parentId: null`. |
+| C2 | Click "+ category", type a name, press Escape. Then click "+ category" and confirm an empty name. | Nothing is created. Escape closes only the name field, not the picker. |
+| C3 | Click "Moods". Create "Angry" in it. | The breadcrumb shows "Gallery › Moods". "Angry" shows in "Moods". "No hover art" does not show. |
+| C4 | Click "Gallery" in the breadcrumb. | The root shows again, with "Moods" and the assets that are in no category. |
+| C5 | Drag an asset onto the "Moods" tile. | The asset leaves the root and shows in "Moods". |
+| C6 | In "Moods", drag that asset onto "Gallery" in the breadcrumb. | The asset goes back to the root. |
+| C7 | Keyboard: Tab to the menu of a category, Enter, "Rename", type a name, Enter. | The category gets the name. The focus stays in the picker. |
+| C8 | Drag "Moods" onto its own tile, and onto the breadcrumb part where it is now. | The drop is refused (no drop cursor). Nothing changes. A drop into its own child cannot happen in the UI: a category and its children never show together, and the unit tests cover the rule. |
+| C9 | Create "Calm" at the root and drag it onto "Moods". | "Calm" moves into "Moods". |
+| C10 | Menu of "Moods", "Rename", type "Feelings", Enter. | The tile and the breadcrumb show "Feelings". |
+| C11 | Menu of "Feelings", "Delete", confirm. | "Feelings" and all categories in it go away. Their assets show at the root again. No asset leaves the gallery. |
+| C12 | Delete an empty category. | It goes away with no confirmation. |
+| C13 | Select an asset that is in a category, go to the root. | The category tile that holds the selection shows a mark. A click on the asset in the category changes the token art, as in A2. |
+| C14 | Put a folder file into a category. Remove the file from the folder and rescan in the gallery manager. | The open picker no longer shows the file. No error. |
+| C15 | GM and player open the picker for the same token. The player creates a category. | Each user sees only their own categories. The write goes to the User flags of the player. |
+| C16 | The same user in two clients: create a category in one. | The open picker of the other client shows it at once. |
+| C17 | Player: create, move, rename, and delete own categories. | All actions work for a player. |
+| C18 | Two quick moves in a row (drag two assets fast). | Both moves are saved. |
+| C19 | Press Escape while a category menu is open, then again. | The first Escape closes the menu, the second closes the picker. |
+| C20 | After the moves, press W. | The canvas pans: no picker control keeps the focus after a mouse action. |
+| C21 | Ctrl+click three assets, then drag one of them onto a category tile. | The three tiles show as marked. All three move into the category in one User update. The token art does not change. |
+| C22 | Click an asset, then Shift+click an asset four tiles later. | The click sets the hover art. The five tiles from the first to the last are marked. |
+| C23 | Ctrl+click a category and an asset, then drag the asset onto another category tile. | Both move into the target, in one User update. |
+| C24 | Mark two tiles, drag a third tile that is not marked onto a category. | Only the dragged tile moves. The marks stay. |
+| C25 | Mark tiles, then press Escape twice. | The first Escape clears the marks, the second closes the picker. |
+| C26 | Keyboard: Shift+Enter on a focused image tile. | It selects the hover art, as a plain Enter does. No tile is marked. |
+| C27 | Mark tiles, then open a category or click a plain tile. | The marks clear. |

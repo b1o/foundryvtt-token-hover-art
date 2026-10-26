@@ -31,7 +31,9 @@ Then enable **Token Hover Art** in your world under **Game Settings → Manage M
 3. Optional: click the star to make an image the default for new tokens of this actor.
 4. Right-click a token. Click the **images** icon in the left column of the Token HUD. The hover art picker opens next to the button. Select an image, or select the "no hover art" tile. Drag the grip in the bottom-left corner of the picker to resize it; each user keeps their own size. The picker opens left of the HUD button, centered on the token. Drag its header to move it: it then keeps that place relative to the token center. It follows the token when the token moves or when you pan or zoom, and it opens at the same place next to every token. The position applies only to you. The pin button in the header puts the picker back at its default place. Close the picker with its close button, with Escape, with a click outside of it, or with the HUD button again. The keyboard also works: Tab moves between the tiles, and Enter or Space selects one.
 5. GMs can click the eye icon in the picker to make the hover art secret. Only GMs and owners see secret hover art.
-6. To move or resize the hover art: hover a token so the image shows, then hold **Ctrl**. The image gets a dashed outline, corner handles, and stays open. Drag the image to move it, or drag a corner handle to resize it. A resize keeps the aspect ratio of each image, and the opposite corner stays in place. The position and size apply only to you. To go back to the corner and the maximum height, turn off **Use my dragged position and size** in the module settings.
+6. Sort the gallery into categories (folders) in the picker. The categories belong to you and to this actor; other users have their own. Click the folder-plus icon to create a category in the shown category, type a name, and press Enter. Click a category to open it; the path above the tiles goes back. Drag an image or a category onto a category tile or onto a part of the path to move it. A category tile has a menu (the dots on the tile) with **Rename** and **Delete**. Moves are drag and drop only for now. A delete never removes an image from the gallery: its images go back to the top. An image is in at most one category.
+7. Mark several tiles to move them together: Ctrl+click (Cmd+click on macOS) marks one tile, Shift+click marks a range, and Ctrl+Shift+click adds a range. Then drag one of the marked tiles. A plain click removes the marks. Escape removes them too.
+8. To move or resize the hover art: hover a token so the image shows, then hold **Ctrl**. The image gets a dashed outline, corner handles, and stays open. Drag the image to move it, or drag a corner handle to resize it. A resize keeps the aspect ratio of each image, and the opposite corner stays in place. The position and size apply only to you. To go back to the corner and the maximum height, turn off **Use my dragged position and size** in the module settings.
 
 ## Folder filters
 
@@ -60,12 +62,14 @@ A folder scan needs the core permission **Use File Browser**. So the scan result
 | Selected art | `flags.token-hover-art.selected` on the TokenDocument | One token |
 | Secret state | `flags.token-hover-art.secret` on the TokenDocument | One token |
 | Defaults | The same two flags on `Actor#prototypeToken` | New tokens |
+| Picker categories | `flags.token-hover-art.categories.<actorId>.<categoryId>` on the User: `{name, parentId, sort, paths}` | One user and one actor |
 
 The gallery is the manual images plus the files of all folders, without duplicates. An unlinked token has a synthetic Actor. The module always writes to the base Actor, so all tokens of the actor share one gallery.
 
 ## Permissions
 
 - The Token HUD shows only to GMs and to owners of the actor (core rule). So only they can select hover art.
+- Each user sees and changes only their own categories. Every client receives the User documents, so category names are not secret.
 - The gallery window opens only for GMs and, if **Allow owners to manage galleries** is on, for owners. When it is off, owners can still select hover art from the gallery, but they cannot change the gallery. The setting controls the user interface; it is not a server rule, so a user with console access could still write the gallery data.
 - To browse files or to add folders, a user needs the core permission **Use File Browser** (default: Trusted Player). To upload files, a user needs **Upload New Files** (default: Assistant GM). Set these in **Configure Permissions**.
 

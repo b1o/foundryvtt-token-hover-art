@@ -12,6 +12,9 @@ export class OpenPickerListeners {
   #onClose;
 
   /** @type {function(): void} */
+  #onEscape;
+
+  /** @type {function(): void} */
   #onViewportChange;
 
   /**
@@ -27,14 +30,14 @@ export class OpenPickerListeners {
   /**
    * Core handles Escape in a keydown listener on window (client/core/keyboard.js:17). Its "dismiss" action releases
    * the controlled tokens, which closes the HUD but not the picker. This listener runs first (document, capture) and
-   * stops the event, so Escape closes only the picker, wherever the focus is.
+   * stops the event, so Escape acts only on the picker, wherever the focus is.
    * @param {KeyboardEvent} event
    */
   #onKeyDown = event => {
     if ( event.key !== "Escape" ) return;
     event.preventDefault();
     event.stopPropagation();
-    this.#onClose();
+    this.#onEscape();
   };
 
   #onResize = () => this.#onViewportChange();
@@ -42,12 +45,14 @@ export class OpenPickerListeners {
   /**
    * @param {object} options
    * @param {HTMLElement} options.picker                The picker root element.
-   * @param {function(): void} options.onClose          Called for an outside press and for Escape.
+   * @param {function(): void} options.onClose          Called for an outside press.
+   * @param {function(): void} options.onEscape         Called for Escape.
    * @param {function(): void} options.onViewportChange Called when the window size changes.
    */
-  constructor({picker, onClose, onViewportChange}) {
+  constructor({picker, onClose, onEscape, onViewportChange}) {
     this.#picker = picker;
     this.#onClose = onClose;
+    this.#onEscape = onEscape;
     this.#onViewportChange = onViewportChange;
   }
 

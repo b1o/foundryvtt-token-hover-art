@@ -77,8 +77,22 @@
   "TOKEN_HOVER_ART.Picker.Secret": "Secret hover art",
   "TOKEN_HOVER_ART.Picker.SecretOn": "Only GMs and owners see it",
   "TOKEN_HOVER_ART.Picker.SecretOff": "Everyone sees it",
+  "TOKEN_HOVER_ART.Picker.Root": "Gallery",
+  "TOKEN_HOVER_ART.Picker.Breadcrumb": "Category path",
+  "TOKEN_HOVER_ART.Picker.NewCategory": "New category",
+  "TOKEN_HOVER_ART.Picker.CategoryEmpty": "This category is empty. Drag an image onto its tile.",
+  "TOKEN_HOVER_ART.Picker.CategoryMenu": "Actions for {name}",
+  "TOKEN_HOVER_ART.Picker.Rename": "Rename",
+  "TOKEN_HOVER_ART.Picker.RenameTitle": "New name for {name}",
+  "TOKEN_HOVER_ART.Picker.Delete": "Delete",
+  "TOKEN_HOVER_ART.Picker.DeleteTitle": "Delete {name}?",
+  "TOKEN_HOVER_ART.Picker.DeleteCategories": "This also deletes the categories in it ({count}).",
+  "TOKEN_HOVER_ART.Picker.DeleteImages": "The images in it ({count}) go back to the gallery. No image leaves the gallery.",
+  "TOKEN_HOVER_ART.Picker.Cancel": "Cancel",
+  "TOKEN_HOVER_ART.Picker.Marked": "Marked",
 
   "TOKEN_HOVER_ART.Errors.TokenMissing": "The token no longer exists. Open the hover art from the Token HUD of a token.",
   "TOKEN_HOVER_ART.Errors.NotOwner": "You do not own this token, so you cannot change its hover art. Ask the GM for ownership.",
-  "TOKEN_HOVER_ART.Errors.NotInGallery": "This image is no longer in the gallery of the actor. Select another image."
+  "TOKEN_HOVER_ART.Errors.NotInGallery": "This image is no longer in the gallery of the actor. Select another image.",
+  "TOKEN_HOVER_ART.Errors.NoActor": "This token has no actor, so it has no gallery and no categories. Link the token to an actor."
 }

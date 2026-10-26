@@ -1,0 +1,12 @@
+{{!-- The popup of the gallery picker (picker-menu.mjs). The labels come localized. --}}
+<div class="tha-menu-title" aria-hidden="true">{{title}}</div>
+{{#if message}}
+<p class="tha-menu-message">{{message}}</p>
+{{/if}}
+{{#if field}}
+<input type="text" class="tha-menu-field" value="{{field.value}}" aria-label="{{title}}" maxlength="100"
+       autocomplete="off" spellcheck="false">
+{{/if}}
+{{#each items}}
+<button type="button" class="tha-menu-item" data-index="{{@index}}" role="menuitem">{{label}}</button>
+{{/each}}

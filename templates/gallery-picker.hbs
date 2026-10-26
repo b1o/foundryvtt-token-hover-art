@@ -27,26 +27,66 @@
     <i class="fas fa-times" aria-hidden="true"></i>
   </button>
 </header>
+{{!-- Each breadcrumb part opens its category and takes drops (picker-drag-drop.mjs). --}}
+<nav class="tha-picker-nav" aria-label="{{localize "TOKEN_HOVER_ART.Picker.Breadcrumb"}}">
+  <ol class="tha-breadcrumb">
+    {{#each breadcrumb}}
+    <li>
+      <button type="button" class="tha-breadcrumb-part" data-tha-action="navigate" data-category-id="{{id}}"
+              data-tha-drop data-tha-focus-key="crumb:{{id}}" {{#if isCurrent}}aria-current="location"{{/if}}>
+        {{#if isRoot}}{{localize "TOKEN_HOVER_ART.Picker.Root"}}{{else}}{{name}}{{/if}}
+      </button>
+    </li>
+    {{/each}}
+  </ol>
+  <button type="button" class="tha-picker-button" data-tha-action="new-category" data-tha-focus-key="new-category"
+          aria-haspopup="dialog" aria-label="{{localize "TOKEN_HOVER_ART.Picker.NewCategory"}}">
+    <i class="fas fa-folder-plus" aria-hidden="true"></i>
+  </button>
+</nav>
 <div class="tha-picker-grid">
-  <button type="button" class="tha-choice tha-choice-none {{#unless hasSelection}}active{{/unless}}"
-          data-tha-action="clear" data-tha-focus-key="none"
-          aria-pressed="{{#if hasSelection}}false{{else}}true{{/if}}"
-          aria-label="{{localize "TOKEN_HOVER_ART.Picker.None"}}">
-    <i class="fas fa-ban" aria-hidden="true"></i>
-  </button>
+  {{#each categories}}
+  <div class="tha-tile" draggable="true" data-tha-drag="category" data-category-id="{{id}}" data-tha-drop
+       data-tha-tile-key="category:{{id}}">
+    <button type="button" class="tha-choice tha-category {{#if containsSelection}}tha-holds-selection{{/if}}"
+            data-tha-action="open-category" data-category-id="{{id}}" data-tha-focus-key="category:{{id}}">
+      <i class="fas fa-folder" aria-hidden="true"></i>
+      <span class="tha-category-name">{{name}}</span>
+    </button>
+    <button type="button" class="tha-tile-menu" data-tha-action="category-menu"
+            data-tha-focus-key="menu:category:{{id}}" aria-haspopup="menu"
+            aria-label="{{localize "TOKEN_HOVER_ART.Picker.CategoryMenu" name=name}}">
+      <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+    </button>
+  </div>
+  {{/each}}
+  {{#if isRoot}}
+  <div class="tha-tile">
+    <button type="button" class="tha-choice tha-choice-none {{#unless hasSelection}}active{{/unless}}"
+            data-tha-action="clear" data-tha-focus-key="none"
+            aria-pressed="{{#if hasSelection}}false{{else}}true{{/if}}"
+            aria-label="{{localize "TOKEN_HOVER_ART.Picker.None"}}">
+      <i class="fas fa-ban" aria-hidden="true"></i>
+    </button>
+  </div>
+  {{/if}}
   {{#each images}}
-  <button type="button" class="tha-choice {{#if active}}active{{/if}}" data-tha-action="select"
-          data-path="{{path}}" data-tha-focus-key="{{path}}"
-          aria-pressed="{{#if active}}true{{else}}false{{/if}}" aria-label="{{name}}">
-    {{#if isVideo}}
-    <video src="{{path}}" muted loop autoplay playsinline aria-hidden="true"></video>
-    {{else}}
-    <img src="{{path}}" alt="" loading="lazy">
-    {{/if}}
-  </button>
+  <div class="tha-tile" draggable="true" data-tha-drag="asset" data-path="{{path}}" data-tha-tile-key="asset:{{path}}">
+    <button type="button" class="tha-choice {{#if active}}active{{/if}}" data-tha-action="select"
+            data-path="{{path}}" data-tha-focus-key="asset:{{path}}"
+            aria-pressed="{{#if active}}true{{else}}false{{/if}}" aria-label="{{name}}">
+      {{#if isVideo}}
+      <video src="{{path}}" muted loop autoplay playsinline aria-hidden="true"></video>
+      {{else}}
+      <img src="{{path}}" alt="" loading="lazy" draggable="false">
+      {{/if}}
+    </button>
+  </div>
   {{/each}}
 </div>
-{{#unless images.length}}
-<p class="tha-picker-empty">{{localize "TOKEN_HOVER_ART.Picker.Empty"}}</p>
-{{/unless}}
+{{#if isEmpty}}
+<p class="tha-picker-empty">
+  {{#if isRoot}}{{localize "TOKEN_HOVER_ART.Picker.Empty"}}{{else}}{{localize "TOKEN_HOVER_ART.Picker.CategoryEmpty"}}{{/if}}
+</p>
+{{/if}}
 <div class="tha-picker-resize" aria-hidden="true"></div>

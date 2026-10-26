@@ -1,3 +1,5 @@
+import { getHolderIds } from "./category-tree.mjs";
+
 /*
  * The template data of the gallery picker. No Foundry access: the picker collects the facts and passes them in.
  */
@@ -5,7 +7,9 @@
 /**
  * @typedef {object} PickerFacts
  * @property {string} tokenName
- * @property {string[]} paths             The gallery of the token's Actor, in gallery order.
+ * @property {import("./category-tree.mjs").CategoryTree} tree  The categories of the user, with the gallery.
+ * @property {string|null} categoryId     The shown category, or null for the root. It must be in the tree.
+ * @property {string[]} ancestorIds       The breadcrumb of the shown category (getAncestors).
  * @property {string|null} selectedPath   The hover art of the token, or null.
  * @property {boolean} isSecret           Is the hover art of the token secret?
  * @property {boolean} isGM
@@ -18,20 +22,37 @@
  * @param {PickerFacts} facts
  * @returns {object}  The data for gallery-picker.hbs.
  */
-export function buildPickerView({tokenName, paths, selectedPath, isSecret, isGM, canManage, isMoved, isVideo}) {
+export function buildPickerView(facts) {
+  const {tree, categoryId, selectedPath, isVideo} = facts;
+  const isRoot = categoryId === null;
+  const holderIds = (selectedPath === null) ? [] : getHolderIds(tree, selectedPath);
+  const categoryIds = isRoot ? tree.rootIds : tree.nodes[categoryId].childIds;
+  const paths = isRoot ? tree.rootPaths : tree.nodes[categoryId].paths;
+  const categories = categoryIds.map(id => ({
+    id,
+    name: tree.nodes[id].name,
+    containsSelection: holderIds.includes(id)
+  }));
   return {
-    tokenName,
-    isGM,
-    canManage,
-    isMoved,
-    secret: isSecret,
+    tokenName: facts.tokenName,
+    isGM: facts.isGM,
+    canManage: facts.canManage,
+    isMoved: facts.isMoved,
+    secret: facts.isSecret,
+    isRoot,
     hasSelection: selectedPath !== null,
+    breadcrumb: [
+      {id: "", name: null, isRoot: true, isCurrent: isRoot},
+      ...facts.ancestorIds.map(id => ({id, name: tree.nodes[id].name, isRoot: false, isCurrent: id === categoryId}))
+    ],
+    categories,
     images: paths.map(path => ({
       path,
       name: getFileName(path),
       isVideo: isVideo(path),
       active: path === selectedPath
-    }))
+    })),
+    isEmpty: !categories.length && !paths.length
   };
 }
 

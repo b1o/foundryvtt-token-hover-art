@@ -2,13 +2,14 @@ export const MODULE_ID = "token-hover-art";
 
 /**
  * Flag keys. The gallery sources (manual images and folders) are on the base Actor.
- * The selection and the secret state are on each Token.
+ * The selection and the secret state are on each Token. The picker categories are on each User.
  */
 export const FLAGS = Object.freeze({
   IMAGES: "images",
   FOLDERS: "folders",
   SELECTED: "selected",
-  SECRET: "secret"
+  SECRET: "secret",
+  CATEGORIES: "categories"
 });
 
 export const SETTINGS = Object.freeze({
@@ -40,5 +41,6 @@ export const POSITIONS = Object.freeze({
 
 export const TEMPLATES = Object.freeze({
   GALLERY_SHEET: `modules/${MODULE_ID}/templates/gallery-sheet.hbs`,
-  GALLERY_PICKER: `modules/${MODULE_ID}/templates/gallery-picker.hbs`
+  GALLERY_PICKER: `modules/${MODULE_ID}/templates/gallery-picker.hbs`,
+  PICKER_MENU: `modules/${MODULE_ID}/templates/picker-menu.hbs`
 });

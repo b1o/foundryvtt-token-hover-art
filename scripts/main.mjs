@@ -9,6 +9,7 @@ import { HudTrigger } from "./triggers/hud-trigger.mjs";
 import { DisplayLayout } from "./hover/display-layout.mjs";
 import { HoverDisplay } from "./hover/hover-display.mjs";
 import { FolderSources } from "./data/folder-sources.mjs";
+import { CategoryStore } from "./data/category-store.mjs";
 import { findByUuid, preloadTemplates } from "./compat.mjs";
 
 const timers = {setTimeout: (fn, ms) => window.setTimeout(fn, ms), clearTimeout: id => window.clearTimeout(id)};
@@ -20,7 +21,8 @@ const hoverDisplay = new HoverDisplay({layout: new DisplayLayout(), timers});
 const picker = new GalleryPicker({
   resolveToken: findByUuid,
   openManager,
-  onStateChange: () => hudTrigger.syncButton()
+  onStateChange: () => hudTrigger.syncButton(),
+  categoryStore: new CategoryStore()
 });
 const hudTrigger = new HudTrigger({picker});
 
@@ -44,6 +46,7 @@ Hooks.on("updateToken", (tokenDoc, change) => {
   if ( hasModuleFlagChange(change) ) hoverDisplay.refreshToken(tokenDoc);
 });
 Hooks.on("updateActor", (actor, change) => picker.onUpdateActor(actor, change));
+Hooks.on("updateUser", (user, change) => picker.onUpdateUser(user, change));
 Hooks.on("deleteToken", tokenDoc => {
   picker.onDeleteToken(tokenDoc);
   hoverDisplay.onDeleteToken(tokenDoc);

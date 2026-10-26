@@ -1,5 +1,4 @@
 import { TEMPLATES } from "../constants.mjs";
-import { getPickerSize, setPickerSize } from "../settings.mjs";
 import {
   getGallery, getSelectedArt, applyAsset, isSecret, setSecret, canManageGallery, getBaseActor, hasModuleFlagChange,
   isVideo
@@ -8,9 +7,12 @@ import { buildPickerView } from "../decisions/picker-view.mjs";
 import { getCompiledTemplate } from "../compat.mjs";
 import { log, notify, reportActionError } from "../output.mjs";
 import { releaseFocusAfterPointerClick } from "../keyboard-focus.mjs";
-import { runPickerMove, runPickerResize, applyPickerSize } from "./picker-gestures.mjs";
+import { PickerGestures } from "./picker-gestures.mjs";
 import { OpenPickerListeners } from "./open-picker-listeners.mjs";
 import { PickerPosition } from "./picker-position.mjs";
+import { PickerShell } from "./picker-shell.mjs";
+import { PickerCategories } from "./picker-categories.mjs";
+import { PickerTiles } from "./picker-tiles.mjs";
 
 /*
  * The gallery picker: the popover where a user selects the hover art of one token. A trigger point opens it with a
@@ -18,7 +20,9 @@ import { PickerPosition } from "./picker-position.mjs";
  * selected and not on the viewed scene.
  *
  * There is one picker per client. A new open() re-targets it. While it is closed, it has no content, so no image
- * or video of the gallery is loaded (FOUNDRY_MODULE_RULES.md 6).
+ * or video of the gallery is loaded (FOUNDRY_MODULE_RULES.md 6). Only the tiles of the shown category are in the page.
+ *
+ * The open state holds the context and the shown category. The categories are those of the current user.
  */
 
 /**
@@ -33,7 +37,14 @@ import { PickerPosition } from "./picker-position.mjs";
  * @property {"hud"} source                         Which trigger point opened the picker.
  */
 
+/**
+ * @typedef {import("../data/category-store.mjs").CategoryScope} CategoryScope
+ */
+
 const STATES = Object.freeze({CLOSED: "closed", OPEN: "open"});
+
+/** The actions of a click on a tile itself. A Ctrl or Shift click on a tile marks it instead (picker-marks.mjs). */
+const TILE_ACTIONS = ["select", "clear", "open-category"];
 
 export class GalleryPicker {
 
@@ -43,14 +54,23 @@ export class GalleryPicker {
   /** The context while the picker is open. @type {PickerContext|null} */
   #context = null;
 
-  /** @type {HTMLElement|null} */
-  #element = null;
+  /** The shown category while the picker is open, or null for the root. @type {string|null} */
+  #categoryId = null;
+
+  /** The page elements. They are created at the first open. @type {PickerShell|null} */
+  #shell = null;
+
+  /** The marks and the drag and drop. @type {PickerTiles|null} */
+  #tiles = null;
 
   /** @type {OpenPickerListeners|null} */
   #listeners = null;
 
   /** @type {Function|null} */
   #template = null;
+
+  /** @type {Function|null} */
+  #menuTemplate = null;
 
   /** Is a placement already scheduled for the end of the current task? */
   #isPlacementScheduled = false;
@@ -66,28 +86,36 @@ export class GalleryPicker {
   /** @type {function(): void} */
   #onStateChange;
 
+  /** @type {PickerCategories} */
+  #categories;
+
   /**
    * @param {object} options
    * @param {function(string): (TokenDocument|null)} options.resolveToken  Finds a token by its UUID.
    * @param {function(Actor): void} options.openManager                   Opens the gallery manager of an Actor.
    * @param {function(): void} options.onStateChange                      Called after each open, re-target, and close.
+   * @param {import("../data/category-store.mjs").CategoryStore} options.categoryStore
    */
-  constructor({resolveToken, openManager, onStateChange}) {
+  constructor({resolveToken, openManager, onStateChange, categoryStore}) {
     this.#resolveToken = resolveToken;
     this.#openManager = openManager;
     this.#onStateChange = onStateChange;
+    this.#categories = new PickerCategories({store: categoryStore});
   }
 
   /**
-   * Load and compile the template. Call this at init, long before the first open. Without the template, open() only
+   * Load and compile the templates. Call this at init, long before the first open. Without the templates, open() only
    * logs an error, so a failed load must be in the log too.
    * @returns {Promise<void>}
    */
   async loadTemplate() {
     try {
-      this.#template = await getCompiledTemplate(TEMPLATES.GALLERY_PICKER);
+      [this.#template, this.#menuTemplate] = await Promise.all([
+        getCompiledTemplate(TEMPLATES.GALLERY_PICKER),
+        getCompiledTemplate(TEMPLATES.PICKER_MENU)
+      ]);
     } catch(err) {
-      log.error("Cannot load the picker template.", err);
+      log.error("Cannot load the picker templates.", err);
     }
   }
 
@@ -117,7 +145,7 @@ export class GalleryPicker {
     const tokenDoc = this.#resolveToken(context.tokenUuid);
     if ( !tokenDoc ) return notify.warn("TOKEN_HOVER_ART.Errors.TokenMissing");
     if ( !tokenDoc.isOwner ) return notify.warn("TOKEN_HOVER_ART.Errors.NotOwner");
-    if ( !this.#template ) return log.error("The picker template is not loaded yet.");
+    if ( !this.#template || !this.#menuTemplate ) return log.error("The picker templates are not loaded yet.");
     this.#transition(STATES.OPEN, context);
     this.#render();
     this.#place();
@@ -132,9 +160,7 @@ export class GalleryPicker {
    * Move the keyboard focus to the selected tile, so Tab and Enter start there.
    */
   focusSelection() {
-    if ( this.#state !== STATES.OPEN ) return;
-    const tile = this.#element.querySelector(".tha-choice.active") ?? this.#element.querySelector(".tha-choice");
-    tile?.focus({preventScroll: true});
+    if ( this.#state === STATES.OPEN ) this.#shell.focusSelection();
   }
 
   /**
@@ -158,6 +184,17 @@ export class GalleryPicker {
     if ( !hasModuleFlagChange(change) && !("ownership" in change) ) return;
     const tokenDoc = this.#resolveToken(this.#context.tokenUuid);
     if ( getBaseActor(tokenDoc?.actor) === actor ) this.#render();
+  }
+
+  /**
+   * Handle the updateUser hook: render again if the categories of the current user changed (also from another client
+   * of the same user).
+   * @param {User} user
+   * @param {object} change
+   */
+  onUpdateUser(user, change) {
+    if ( (this.#state !== STATES.OPEN) || (user !== game.user) ) return;
+    if ( hasModuleFlagChange(change) ) this.#render();
   }
 
   /**
@@ -204,34 +241,57 @@ export class GalleryPicker {
 
   /**
    * The only place that changes the state. A close removes the content, so its videos stop and unload.
+   * An open starts at the category of the context.
    * @param {STATES[keyof STATES]} state
    * @param {PickerContext|null} context
    */
   #transition(state, context) {
-    const element = this.#getElement();
+    const shell = this.#getShell();
     this.#state = state;
     this.#context = context;
-    const isOpen = state === STATES.OPEN;
-    element.hidden = !isOpen;
-    if ( isOpen ) this.#listeners.start();
-    else {
-      this.#listeners.stop();
-      element.replaceChildren();
+    this.#categoryId = context?.categoryId ?? null;
+    if ( state === STATES.OPEN ) {
+      shell.menu.close();
+      shell.show();
+      this.#listeners.start();
     }
+    else {
+      shell.hide();
+      this.#listeners.stop();
+    }
+    this.#tiles.clearMarks();
     this.#onStateChange();
   }
 
   /**
+   * Show another category. The picker height can change, so it is placed again.
+   * @param {string|null} categoryId  A category, or null for the root.
+   */
+  #navigate(categoryId) {
+    this.#categoryId = categoryId;
+    this.#tiles.clearMarks();
+    this.#render();
+    this.#shell.scrollToTop();
+    this.#place();
+  }
+
+  /**
    * Render the content for the current context. The scroll position and the focused tile stay.
-   * If the token is gone or the user lost its ownership, the picker closes.
+   * If the token is gone or the user lost its ownership, the picker closes. If the shown category is gone, the picker
+   * shows the root.
    */
   #render() {
     const tokenDoc = this.#resolveToken(this.#context.tokenUuid);
     if ( !tokenDoc?.isOwner ) return this.close();
     const actor = tokenDoc.actor;
+    const scope = this.#getScope(tokenDoc);
+    const categories = this.#categories.read(scope, getGallery(actor), this.#categoryId);
+    this.#categoryId = categories.categoryId;
     const view = buildPickerView({
       tokenName: tokenDoc.name,
-      paths: getGallery(actor),
+      tree: categories.tree,
+      categoryId: categories.categoryId,
+      ancestorIds: categories.ancestorIds,
       selectedPath: getSelectedArt(tokenDoc),
       isSecret: isSecret(tokenDoc),
       isGM: game.user.isGM,
@@ -239,32 +299,20 @@ export class GalleryPicker {
       isMoved: this.#position.isMoved(this.#context),
       isVideo
     });
-
-    const element = this.#element;
-    const scrollTop = element.querySelector(".tha-picker-grid")?.scrollTop ?? 0;
-    const focusKey = element.contains(document.activeElement)
-      ? document.activeElement.closest("[data-tha-focus-key]")?.dataset.thaFocusKey
-      : undefined;
-    element.innerHTML = this.#template(view);
-    element.setAttribute("aria-label", game.i18n.format("TOKEN_HOVER_ART.Picker.Title", {name: tokenDoc.name}));
-    applyPickerSize(element, getPickerSize());
-    element.querySelector(".tha-picker-grid").scrollTop = scrollTop;
-    if ( focusKey !== undefined ) this.#findByFocusKey(focusKey)?.focus();
-  }
-
-  #place() {
-    this.#position.apply(this.#element, this.#context);
+    this.#shell.render(view, game.i18n.format("TOKEN_HOVER_ART.Picker.Title", {name: tokenDoc.name}));
+    this.#tiles.syncMarks();
   }
 
   /**
-   * Save the place where the user dragged the picker, for this user and the reference of the context. Render again,
-   * so the reset button shows.
-   * @param {DOMRect} rect  The screen rectangle of the picker.
+   * @param {TokenDocument} tokenDoc
+   * @returns {CategoryScope}  The categories of the current user for the gallery of the token.
    */
-  async #saveMove(rect) {
-    const context = this.#context;
-    const isSaved = await this.#position.save(rect, context);
-    if ( isSaved && (this.#context === context) ) this.#render();
+  #getScope(tokenDoc) {
+    return {userId: game.user.id, actorId: getBaseActor(tokenDoc.actor)?.id ?? null};
+  }
+
+  #place() {
+    this.#position.apply(this.#shell.element, this.#context);
   }
 
   /**
@@ -279,66 +327,83 @@ export class GalleryPicker {
   }
 
   /**
-   * Start a move (header) or a resize (grip) drag. The header buttons keep their click.
+   * A press outside the popup closes it. A press on the header or on the grip starts a gesture.
    * @param {PointerEvent} event
+   * @param {PickerGestures} gestures
    */
-  #onPointerDown(event) {
+  #onPointerDown(event, gestures) {
     if ( event.button !== 0 ) return;
-    const element = this.#element;
-    if ( event.target.closest(".tha-picker-resize") ) {
-      return runPickerResize(event, element, {
-        startSize: getPickerSize(),
-        onEnd: (size, rect) => this.#onResizeEnd(size, rect)
-      });
-    }
-    if ( event.target.closest(".tha-picker-header") && !event.target.closest("button") ) {
-      runPickerMove(event, element, rect => this.#saveMove(rect).catch(reportActionError));
-    }
+    const menu = this.#shell.menu;
+    if ( !event.target.closest(".tha-menu") && !menu.isOpenFrom(event.target.closest("[data-tha-action]")) ) menu.close();
+    gestures.start(event);
   }
 
   /**
-   * Save the new size. A moved picker also saves its new position, because the resize moved its left edge.
-   * @param {{width: number, height: number}} size
-   * @param {DOMRect} rect
+   * Escape closes the popup first, then removes the marks, then closes the picker.
    */
-  async #onResizeEnd(size, rect) {
-    const context = this.#context;
-    try {
-      await setPickerSize(size);
-      if ( this.#position.isMoved(context) ) await this.#position.save(rect, context);
-    } catch(err) {
-      reportActionError(err);
-    }
+  #onEscape() {
+    if ( this.#shell.menu.isOpen() ) this.#shell.menu.close();
+    else if ( this.#tiles.hasMarks() ) this.#tiles.clearMarks();
+    else this.close();
   }
 
   /**
-   * @param {string} key
-   * @returns {HTMLElement|null}
+   * @returns {PickerShell}  The page elements. They are created on first use and stay in the page.
    */
-  #findByFocusKey(key) {
-    return [...this.#element.querySelectorAll("[data-tha-focus-key]")].find(e => e.dataset.thaFocusKey === key) ?? null;
-  }
-
-  /**
-   * @returns {HTMLElement}  The root element. It is created on first use and stays in the page.
-   */
-  #getElement() {
-    if ( this.#element ) return this.#element;
-    const element = document.createElement("section");
-    element.id = "token-hover-art-picker";
-    element.className = "tha-picker";
-    element.setAttribute("role", "dialog");
-    element.hidden = true;
+  #getShell() {
+    if ( this.#shell ) return this.#shell;
+    const shell = new PickerShell({template: this.#template, menuTemplate: this.#menuTemplate});
+    const element = shell.element;
+    const gestures = new PickerGestures({
+      picker: element,
+      position: this.#position,
+      getContext: () => this.#context,
+      onMoveSaved: () => this.#render()
+    });
     element.addEventListener("click", event => this.#onClick(event));
-    element.addEventListener("pointerdown", event => this.#onPointerDown(event));
-    document.body.append(element);
-    this.#element = element;
+    element.addEventListener("pointerdown", event => this.#onPointerDown(event, gestures));
+    this.#shell = shell;
+    this.#tiles = new PickerTiles({
+      root: element,
+      getContent: () => shell.content,
+      categories: this.#categories,
+      getTileScope: () => this.#getTileScope()
+    });
     this.#listeners = new OpenPickerListeners({
       picker: element,
       onClose: () => this.close(),
+      onEscape: () => this.#onEscape(),
       onViewportChange: () => this.#place()
     });
-    return element;
+    return shell;
+  }
+
+  /**
+   * @returns {import("./picker-tiles.mjs").TileScope|null}  The open picker now, or null if it is closed or its token
+   *                                                        is gone.
+   */
+  #getTileScope() {
+    const tokenDoc = (this.#state === STATES.OPEN) ? this.#resolveToken(this.#context.tokenUuid) : null;
+    if ( !tokenDoc ) return null;
+    return {
+      tokenUuid: tokenDoc.uuid,
+      scope: this.#getScope(tokenDoc),
+      categoryId: this.#categoryId,
+      paths: getGallery(tokenDoc.actor)
+    };
+  }
+
+  /**
+   * Open a popup below its opener, or close it if this opener opened it.
+   * @param {HTMLElement} opener
+   * @param {MouseEvent} event
+   * @param {function(): (import("./picker-menu.mjs").MenuSpec|null)} buildSpec
+   */
+  #toggleMenu(opener, event, buildSpec) {
+    const menu = this.#shell.menu;
+    if ( menu.isOpenFrom(opener) ) return menu.close();
+    const spec = buildSpec();
+    if ( spec ) menu.open(opener, spec, event);
   }
 
   /**
@@ -350,14 +415,23 @@ export class GalleryPicker {
     releaseFocusAfterPointerClick(event, button);
     const tokenDoc = this.#resolveToken(this.#context.tokenUuid);
     if ( !tokenDoc ) return this.close();
+    const scope = this.#getScope(tokenDoc);
+    const action = button.dataset.thaAction;
+    if ( TILE_ACTIONS.includes(action) && this.#tiles.isMarkClick(event, button) ) return;
     try {
-      switch ( button.dataset.thaAction ) {
+      switch ( action ) {
         case "select": return await applyAsset(tokenDoc, button.dataset.path);
         case "clear": return await applyAsset(tokenDoc, null);
         case "secret": return await setSecret(tokenDoc, !isSecret(tokenDoc));
         case "manage": return this.#openManager(tokenDoc.actor);
         case "reset-position": return await this.#resetPosition();
         case "close": return this.close();
+        case "open-category":
+        case "navigate": return this.#navigate(button.dataset.categoryId || null);
+        case "new-category":
+          return this.#toggleMenu(button, event, () => this.#categories.buildCreateField(scope, this.#categoryId));
+        case "category-menu": return this.#toggleMenu(button, event, () => this.#categories.buildCategoryMenu(scope,
+          getGallery(tokenDoc.actor), button.closest(".tha-tile").dataset.categoryId));
       }
     } catch(err) {
       reportActionError(err);

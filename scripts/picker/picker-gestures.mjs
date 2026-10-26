@@ -1,11 +1,86 @@
 import { clampPickerSize, keepInViewport } from "../decisions/picker-placement.mjs";
 import { runPointerDrag } from "../pointer-drag.mjs";
+import { getPickerSize, setPickerSize } from "../settings.mjs";
+import { reportActionError } from "../output.mjs";
 
 /*
  * The two pointer gestures of the gallery picker: a drag on the header moves it, a drag on the grip resizes it.
  * The grip is in the bottom-left corner, so a resize keeps the right edge and the top edge in place: a move to the
  * left makes the grid wider, a move down makes it taller.
  */
+
+/**
+ * @typedef {import("./gallery-picker.mjs").PickerContext} PickerContext
+ */
+
+/**
+ * Starts the gestures and saves their result for the context of the open picker.
+ */
+export class PickerGestures {
+
+  /** @type {HTMLElement} */
+  #picker;
+
+  /** @type {import("./picker-position.mjs").PickerPosition} */
+  #position;
+
+  /** @type {function(): (PickerContext|null)} */
+  #getContext;
+
+  /** @type {function(): void} */
+  #onMoveSaved;
+
+  /**
+   * @param {object} options
+   * @param {HTMLElement} options.picker                 The picker root element.
+   * @param {import("./picker-position.mjs").PickerPosition} options.position
+   * @param {function(): (PickerContext|null)} options.getContext  The context of the open picker now.
+   * @param {function(): void} options.onMoveSaved      Called after a saved move, if the context did not change.
+   */
+  constructor({picker, position, getContext, onMoveSaved}) {
+    this.#picker = picker;
+    this.#position = position;
+    this.#getContext = getContext;
+    this.#onMoveSaved = onMoveSaved;
+  }
+
+  /**
+   * Start a resize (grip) or a move (header) for a pointerdown. The header buttons keep their click.
+   * @param {PointerEvent} event
+   */
+  start(event) {
+    if ( event.target.closest(".tha-picker-resize") ) {
+      return runPickerResize(event, this.#picker, {
+        startSize: getPickerSize(),
+        onEnd: (size, rect) => this.#saveResize(size, rect).catch(reportActionError)
+      });
+    }
+    if ( event.target.closest(".tha-picker-header") && !event.target.closest("button") ) {
+      runPickerMove(event, this.#picker, rect => this.#saveMove(rect).catch(reportActionError));
+    }
+  }
+
+  /**
+   * Save the place where the user dragged the picker, for this user and the reference of the context.
+   * @param {DOMRect} rect  The screen rectangle of the picker.
+   */
+  async #saveMove(rect) {
+    const context = this.#getContext();
+    const isSaved = await this.#position.save(rect, context);
+    if ( isSaved && (this.#getContext() === context) ) this.#onMoveSaved();
+  }
+
+  /**
+   * Save the new size. A moved picker also saves its new position, because the resize moved its left edge.
+   * @param {{width: number, height: number}} size
+   * @param {DOMRect} rect
+   */
+  async #saveResize(size, rect) {
+    const context = this.#getContext();
+    await setPickerSize(size);
+    if ( this.#position.isMoved(context) ) await this.#position.save(rect, context);
+  }
+}
 
 /**
  * Run one move drag, from the pointerdown on the header to the release. The picker stays inside the viewport.
