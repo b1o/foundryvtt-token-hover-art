@@ -28,12 +28,7 @@ import { isPointerClick } from "../keyboard-focus.mjs";
  * @property {MenuItem[]} items
  */
 
-const STATES = Object.freeze({CLOSED: "closed", OPEN: "open"});
-
 export class PickerMenu {
-
-  /** @type {STATES[keyof STATES]} */
-  #state = STATES.CLOSED;
 
   /** @type {HTMLElement} */
   #element;
@@ -41,7 +36,7 @@ export class PickerMenu {
   /** @type {Function} */
   #template;
 
-  /** @type {MenuSpec|null} */
+  /** The content while the popup is open, null while it is closed. @type {MenuSpec|null} */
   #spec = null;
 
   /** @type {HTMLElement|null} */
@@ -68,7 +63,7 @@ export class PickerMenu {
 
   /** @returns {boolean} */
   isOpen() {
-    return this.#state === STATES.OPEN;
+    return this.#spec !== null;
   }
 
   /**
@@ -88,27 +83,25 @@ export class PickerMenu {
     this.#opener?.setAttribute("aria-expanded", "false");
     this.#opener = opener;
     this.#isKeyboardOpen = !isPointerClick(event);
-    this.#transition(STATES.OPEN, spec);
+    this.#transition(spec);
   }
 
   /**
    * Close the popup. After a keyboard open, the focus goes back to the opener.
    */
   close() {
-    if ( this.#state === STATES.CLOSED ) return;
+    if ( !this.isOpen() ) return;
     const opener = this.#opener;
     const hadFocus = this.#element.contains(document.activeElement);
-    this.#transition(STATES.CLOSED, null);
+    this.#transition(null);
     if ( this.#isKeyboardOpen && hadFocus && opener.isConnected ) opener.focus();
   }
 
   /**
-   * The only place that changes the state.
-   * @param {STATES[keyof STATES]} state
+   * The only place that changes the open state: a spec opens the popup or shows its next step, null closes it.
    * @param {MenuSpec|null} spec
    */
-  #transition(state, spec) {
-    this.#state = state;
+  #transition(spec) {
     this.#spec = spec;
     this.#opener?.setAttribute("aria-expanded", String(!!spec));
     const element = this.#element;
@@ -149,7 +142,7 @@ export class PickerMenu {
     const button = event.target.closest(".tha-menu-item");
     if ( !button ) return;
     const item = this.#spec.items[Number(button.dataset.index)];
-    if ( item.next ) return this.#transition(STATES.OPEN, item.next());
+    if ( item.next ) return this.#transition(item.next());
     this.close();
     item.onSelect?.();
   }

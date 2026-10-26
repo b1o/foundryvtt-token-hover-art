@@ -169,8 +169,8 @@ export function registerSettings(onDisplayChange) {
     default: {...DEFAULT_PICKER_SIZE}
   });
 
-  // The positions that this user dragged the gallery picker to: one slot for each reference (see
-  // picker-offsets.mjs). An empty slot means the automatic placement next to the trigger.
+  // The positions that this user dragged the gallery picker to: one slot for each trigger point (see
+  // getPickerOffset and picker-offsets.mjs). An empty slot means the default place of the trigger point.
   game.settings.register(MODULE_ID, SETTINGS.PICKER_POSITION, {
     scope: "client",
     config: false,
@@ -251,28 +251,32 @@ export const getPickerSize = () => clampPickerSize(get(SETTINGS.PICKER_SIZE));
 export const setPickerSize = size => set(SETTINGS.PICKER_SIZE, clampPickerSize(size));
 
 /**
- * @typedef {object} PickerOffsets
- * @property {import("./decisions/picker-offsets.mjs").PickerOffset|null} token   For a picker from the Token HUD.
- * @property {import("./decisions/picker-offsets.mjs").PickerOffset|null} screen  For every other trigger.
+ * The stored slot of the dragged picker position for each trigger point. The slot names come from v0.5.0, so the
+ * positions that users saved stay.
  */
+const PICKER_OFFSET_SLOTS = Object.freeze({hud: "token", hotbar: "screen"});
 
-/** @returns {PickerOffsets}  The dragged picker positions. An invalid stored slot counts as empty. */
-export function getPickerOffsets() {
-  const stored = get(SETTINGS.PICKER_POSITION);
-  return {
-    token: isOffset(stored?.token) ? stored.token : null,
-    screen: isOffset(stored?.screen) ? stored.screen : null
-  };
+/**
+ * @param {import("./picker/gallery-picker.mjs").PickerTrigger} trigger
+ * @returns {import("./decisions/picker-offsets.mjs").PickerOffset|null}  The dragged picker position for this trigger
+ *                                                                        point. An invalid stored slot counts as empty.
+ */
+export function getPickerOffset(trigger) {
+  const offset = get(SETTINGS.PICKER_POSITION)?.[PICKER_OFFSET_SLOTS[trigger]];
+  return isOffset(offset) ? offset : null;
 }
 
 /**
- * Change one slot. The other slot is read right before the write, so it stays.
- * @param {keyof PickerOffsets} reference
+ * Change the slot of one trigger point. The other slots are read right before the write, so they stay.
+ * @param {import("./picker/gallery-picker.mjs").PickerTrigger} trigger
  * @param {object|null} offset  The new offset, or null to go back to the automatic placement.
  */
-export const setPickerOffset = (reference, offset) => {
-  return set(SETTINGS.PICKER_POSITION, {...getPickerOffsets(), [reference]: offset});
-};
+export function setPickerOffset(trigger, offset) {
+  const slots = {};
+  for ( const [slotTrigger, slot] of Object.entries(PICKER_OFFSET_SLOTS) ) slots[slot] = getPickerOffset(slotTrigger);
+  slots[PICKER_OFFSET_SLOTS[trigger]] = offset;
+  return set(SETTINGS.PICKER_POSITION, slots);
+}
 
 /**
  * @param {string} key  A key of COLOR_DEFAULTS.

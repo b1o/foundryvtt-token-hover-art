@@ -34,17 +34,17 @@ document describes the full feature before the first commit.
  * @typedef {object} PickerContext
  * @property {string} tokenUuid                        The token whose hover art the picker changes.
  * @property {string|null} categoryId                  The category to open, or null for the root.
- * @property {"trigger"|"center"} placement           The default place: next to the trigger, or the viewport center.
- * @property {function(): (DOMRect|null)} [getAnchorRect]  For "trigger": the trigger rectangle now.
- * @property {"token"|"screen"} positionReference      What a pinned position is relative to (section 5.2).
- * @property {function(): (Rect|null)} [getTokenRect]  For "token": the token rectangle on the screen now.
- * @property {"hud"|"hotbar"} source                   Which trigger point opened the picker.
+ * @property {"hud"|"hotbar"} trigger                  The trigger point that opened the picker.
+ * @property {function(): (DOMRect|null)} [getAnchorRect]  For "hud": the HUD button rectangle now.
+ * @property {function(): (Rect|null)} [getTokenRect]  For "hud": the token rectangle on the screen now.
  */
 ```
 
 - A trigger point calls `picker.open(context)` and does nothing else.
-- The trigger point decides the position reference: the Token HUD uses "token", every other trigger uses "screen".
-- `source` is read in one place only: a picker from the HUD closes on a scene change.
+- The trigger sets three things: the default place (5.1), the slot of the saved dragged position (5.2), and whether
+  a scene change closes the picker (only "hud"). Decision (user, 2026-10-26, after v0.5.1): one `trigger` field
+  replaces the fields `placement`, `positionReference`, and `source`, because they had only two combinations. A new
+  trigger point adds a value and its three answers.
 - An asset shortcut does not open the picker. It calls `applyAsset(tokenDoc, path)`, the same function that the
   picker uses for a click on an asset. So both paths have one owner (rule 3.1).
 
@@ -120,7 +120,7 @@ must open it for a token that is not selected or not on the viewed scene. So the
 `getBesideTrigger(anchor, centerY, size)` in `picker-placement.mjs` gives the place left of the trigger. Decision
 (2026-10-26): its vertical center is on the token center for a picker from the Token HUD. Decision (user,
 2026-10-26): a picker from the hotbar has no trigger place; `getViewportCenter` gives the center of the viewport. The
-trigger point chooses with `placement` ("trigger" or "center", section 3). Both functions do not clamp: a dragged
+`trigger` of the context chooses: "hud" is beside the HUD button, "hotbar" is the viewport center (section 3). Both functions do not clamp: a dragged
 offset is added first (5.2), and `keepInViewport` runs last. The picker is placed again on each canvas pan, token
 move, HUD render, window resize, and navigation (section 4).
 
@@ -144,17 +144,18 @@ Decision (2026-10-26): the picker header is the drag handle, as in a window. No 
   old offset (from the token center) moved the picker against the HUD on a zoom, because the HUD button moves away
   from the token center when the token grows on the screen.
 
-  | Reference | Used by | Default place |
+  | Trigger | Stored slot | Default place |
   |---|---|---|
-  | `token` | Token HUD | Left of the HUD button, centered on the token (`compat.getTokenScreenRect`) |
-  | `screen` | Hotbar | The viewport center |
+  | `hud` | `token` | Left of the HUD button, centered on the token (`compat.getTokenScreenRect`) |
+  | `hotbar` | `screen` | The viewport center |
 
   A stored offset has the mark `from: "default"`. The offsets of v0.5.0 have no mark; they count as empty, so the
   picker opens at its default place until the next drag.
-- One slot for each reference, in the client setting `pickerPosition`: `{token, screen}`. One shared value would
-  move a picker from the hotbar to a place that the user chose relative to a token. A drag saves only the slot of the
-  current reference, and the other slot is read right before the write (rule 4.1). The token slot is one value for
-  all tokens of the user.
+- One slot for each trigger point, in the client setting `pickerPosition`: `{token, screen}` (the "hud" trigger uses
+  `token`, the "hotbar" trigger uses `screen`; the names come from v0.5.0, so saved positions stay). One shared value
+  would move a picker from the hotbar to a place that the user chose relative to a token. A drag saves only the slot
+  of the current trigger point, and the other slot is read right before the write (rule 4.1). The token slot is one
+  value for all tokens of the user.
 - An empty slot means the default placement (5.1).
 - A picker from the HUD follows its token: canvas pan and zoom, token move animation (`refreshToken`), and the HUD
   render after a move. The placement runs once, in the next animation frame, because core moves the HUD after these
@@ -162,7 +163,7 @@ Decision (2026-10-26): the picker header is the drag handle, as in a window. No 
 - A resize of a moved picker saves the new offset too, because the resize moves its left edge.
 - The saved position is clamped into the viewport each time it is applied, not only at the drag (rule 3.2).
 - The move cursor on the header is the only sign of the drag. No tooltip (rule 9.4).
-- A reset button (pin icon) shows in the header only while the slot of the current reference is set, as a pressed
+- A reset button (pin icon) shows in the header only while the slot of the current trigger point is set, as a pressed
   toggle. A click clears that slot only, and the picker goes back to its default place.
 - The drag loop (pointer capture and the 4-pixel threshold) is shared with the hover display (`pointer-drag.mjs`,
   rule 3.3).
@@ -307,8 +308,8 @@ Decision (user, 2026-10-26): the picker header is not a drag source; it stays th
    shortcut from the hover art picker." Stop.
 3. Check `tokenDoc.isOwner`. Not owner: notification, stop.
 4. By kind:
-   - `gallery`: `picker.open({tokenUuid, categoryId: null, placement: "center", positionReference: "screen",
-     source: "hotbar"})`. The picker opens in the viewport center (5.1).
+   - `gallery`: `picker.open({tokenUuid, categoryId: null, trigger: "hotbar"})`. The picker opens in the viewport
+     center (5.1).
    - `category`: the same, with `categoryId`. If the category no longer exists, open the root and tell the user.
    - `asset`: `applyAsset(tokenDoc, path)`. The path must still be in the gallery, or be `null`. If not:
      notification, no change (rule 3.2).
@@ -375,7 +376,7 @@ scripts/
   picker/
     gallery-picker.mjs         state, open, close, render, actions
     picker-gestures.mjs        header move and grip resize
-    picker-position.mjs        dragged or default placement, save and reset per reference
+    picker-position.mjs        dragged or default placement, save and reset per trigger point
     open-picker-listeners.mjs  page listeners while open: outside press, Escape, window resize
     picker-shell.mjs           the page elements: root, rendered content (keeps scroll and focus), popup
     picker-menu.mjs            class PickerMenu: the popup (menu, choice list, name field, confirmation)

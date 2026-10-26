@@ -23,33 +23,35 @@ import { PickerMarks, getTileKey } from "./picker-marks.mjs";
  * There is one picker per client. A new open() re-targets it. While it is closed, it has no content, so no image
  * or video of the gallery is loaded (FOUNDRY_MODULE_RULES.md 6). Only the tiles of the shown category are in the page.
  *
- * The open state holds the context and the shown category. The categories are those of the current user.
+ * The context is the open state: the picker is open while it has a context. The open picker also has the shown
+ * category. The categories are those of the current user.
+ */
+
+/**
+ * The trigger point that opened the picker. It sets the default place (picker-position.mjs), the saved dragged
+ * position, and whether a scene change closes the picker:
+ * - "hud": next to the Token HUD button, centered on the token; the picker closes with the scene.
+ * - "hotbar": in the viewport center (also a shortcut macro run from the macro directory).
+ * @typedef {"hud"|"hotbar"} PickerTrigger
  */
 
 /**
  * @typedef {object} PickerContext
  * @property {string} tokenUuid                     The token whose hover art the picker changes.
  * @property {string|null} categoryId               The category to open, or null for the root.
- * @property {"trigger"|"center"} placement         The default place: next to the trigger, or the viewport center.
- * @property {function(): (DOMRect|null)} [getAnchorRect]  For "trigger": the screen rectangle of the trigger now, or
+ * @property {PickerTrigger} trigger
+ * @property {function(): (DOMRect|null)} [getAnchorRect]  For "hud": the screen rectangle of the HUD button now, or
  *                                                  null if it is gone. The picker asks again when the view changes.
- * @property {"token"|"screen"} positionReference   What a dragged position is relative to (picker-offsets.mjs).
- * @property {function(): (DOMRect|null)} [getTokenRect]  For the "token" reference: the token rectangle on the
- *                                                  screen now, or null if it is not on the screen.
- * @property {"hud"|"hotbar"} source                Which trigger point opened the picker.
+ * @property {function(): (DOMRect|null)} [getTokenRect]  For "hud": the token rectangle on the screen now, or null if
+ *                                                  it is not on the screen.
  */
-
-const STATES = Object.freeze({CLOSED: "closed", OPEN: "open"});
 
 /** The actions of a click on a tile itself. A Ctrl or Shift click on a tile marks it instead (picker-marks.mjs). */
 const TILE_ACTIONS = ["select", "clear", "open-category"];
 
 export class GalleryPicker {
 
-  /** @type {STATES[keyof STATES]} */
-  #state = STATES.CLOSED;
-
-  /** The context while the picker is open. @type {PickerContext|null} */
+  /** The context while the picker is open, null while it is closed. @type {PickerContext|null} */
   #context = null;
 
   /** The shown category while the picker is open, or null for the root. @type {string|null} */
@@ -127,7 +129,7 @@ export class GalleryPicker {
    * @returns {boolean}  Does the picker show this token now?
    */
   isOpenFor(tokenUuid) {
-    return (this.#state === STATES.OPEN) && (this.#context.tokenUuid === tokenUuid);
+    return this.#isOpen() && (this.#context.tokenUuid === tokenUuid);
   }
 
   /**
@@ -149,21 +151,20 @@ export class GalleryPicker {
     if ( !tokenDoc ) return notify.warn("TOKEN_HOVER_ART.Errors.TokenMissing");
     if ( !tokenDoc.isOwner ) return notify.warn("TOKEN_HOVER_ART.Errors.NotOwner");
     if ( !this.#template || !this.#menuTemplate ) return log.error("The picker templates are not loaded yet.");
-    this.#transition(STATES.OPEN, context);
+    this.#transition(context);
     this.#render();
     this.#place();
   }
 
   close() {
-    if ( this.#state === STATES.CLOSED ) return;
-    this.#transition(STATES.CLOSED, null);
+    if ( this.#isOpen() ) this.#transition(null);
   }
 
   /**
    * Move the keyboard focus to the selected tile, so Tab and Enter start there.
    */
   focusSelection() {
-    if ( this.#state === STATES.OPEN ) this.#shell.focusSelection();
+    if ( this.#isOpen() ) this.#shell.focusSelection();
   }
 
   /**
@@ -183,7 +184,7 @@ export class GalleryPicker {
    * @param {object} change
    */
   onUpdateActor(actor, change) {
-    if ( this.#state !== STATES.OPEN ) return;
+    if ( !this.#isOpen() ) return;
     if ( !hasModuleFlagChange(change) && !("ownership" in change) ) return;
     const tokenDoc = this.#resolveToken(this.#context.tokenUuid);
     if ( getBaseActor(tokenDoc?.actor) === actor ) this.#render();
@@ -196,7 +197,7 @@ export class GalleryPicker {
    * @param {object} change
    */
   onUpdateUser(user, change) {
-    if ( (this.#state !== STATES.OPEN) || (user !== game.user) ) return;
+    if ( !this.#isOpen() || (user !== game.user) ) return;
     if ( hasModuleFlagChange(change) ) this.#render();
   }
 
@@ -215,11 +216,11 @@ export class GalleryPicker {
    * comes before the HUD#setPosition at the end of the render (client/apps/hud/hud.js:84).
    */
   followTrigger() {
-    if ( (this.#state !== STATES.OPEN) || this.#isPlacementScheduled ) return;
+    if ( !this.#isOpen() || this.#isPlacementScheduled ) return;
     this.#isPlacementScheduled = true;
     window.requestAnimationFrame(() => {
       this.#isPlacementScheduled = false;
-      if ( this.#state === STATES.OPEN ) this.#place();
+      if ( this.#isOpen() ) this.#place();
     });
   }
 
@@ -236,24 +237,27 @@ export class GalleryPicker {
 
   /**
    * Handle the canvasTearDown hook. A picker from the Token HUD belongs to the viewed scene: its trigger and its
-   * token leave with the scene. This is the only rule that depends on the source of the context.
+   * token leave with the scene.
    */
   onCanvasTearDown() {
-    if ( (this.#state === STATES.OPEN) && (this.#context.source === "hud") ) this.close();
+    if ( this.#context?.trigger === "hud" ) this.close();
+  }
+
+  /** @returns {boolean} */
+  #isOpen() {
+    return this.#context !== null;
   }
 
   /**
-   * The only place that changes the state. A close removes the content, so its videos stop and unload.
-   * An open starts at the category of the context.
-   * @param {STATES[keyof STATES]} state
+   * The only place that changes the open state: a context opens or re-targets the picker, null closes it. A close
+   * removes the content, so its videos stop and unload. An open starts at the category of the context.
    * @param {PickerContext|null} context
    */
-  #transition(state, context) {
+  #transition(context) {
     const shell = this.#getShell();
-    this.#state = state;
     this.#context = context;
     this.#categoryId = context?.categoryId ?? null;
-    if ( state === STATES.OPEN ) {
+    if ( context ) {
       shell.menu.close();
       shell.show();
       this.#listeners.start();
@@ -379,7 +383,7 @@ export class GalleryPicker {
    *                                                        is gone.
    */
   #getTileScope() {
-    const tokenDoc = (this.#state === STATES.OPEN) ? this.#resolveToken(this.#context.tokenUuid) : null;
+    const tokenDoc = this.#isOpen() ? this.#resolveToken(this.#context.tokenUuid) : null;
     if ( !tokenDoc ) return null;
     return {
       tokenUuid: tokenDoc.uuid,

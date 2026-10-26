@@ -88,9 +88,7 @@ export class HotbarTrigger {
       tokenUuid: tokenDoc.uuid,
       categoryId: this.#getExistingCategory(shortcut, tokenDoc),
       // User decision 2026-10-26: a picker from the hotbar opens in the screen center, not next to the slot.
-      placement: "center",
-      positionReference: "screen",
-      source: "hotbar"
+      trigger: "hotbar"
     });
   }
 

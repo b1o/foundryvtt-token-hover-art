@@ -91,11 +91,9 @@ export class HudTrigger {
     this.#picker.toggle({
       tokenUuid,
       categoryId: null,
-      placement: "trigger",
+      trigger: "hud",
       getAnchorRect: () => this.#getButtonRect(tokenUuid),
-      positionReference: "token",
-      getTokenRect: () => this.#getTokenRect(tokenUuid),
-      source: "hud"
+      getTokenRect: () => this.#getTokenRect(tokenUuid)
     });
     releaseFocusAfterPointerClick(event, event.currentTarget);
     if ( !isPointerClick(event) ) this.#picker.focusSelection();

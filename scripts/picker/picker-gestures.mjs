@@ -58,7 +58,7 @@ export class PickerGestures {
   }
 
   /**
-   * Save the place where the user dragged the picker, for this user and the reference of the context.
+   * Save the place where the user dragged the picker, for this user and the trigger point of the context.
    * @param {DOMRect} rect  The screen rectangle of the picker.
    */
   async #saveMove(rect) {

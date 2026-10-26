@@ -1,4 +1,4 @@
-import { getPickerOffsets, setPickerOffset } from "../settings.mjs";
+import { getPickerOffset, setPickerOffset } from "../settings.mjs";
 import { getBesideTrigger, getViewportCenter } from "../decisions/picker-placement.mjs";
 import { getViewportSize, placeInViewport } from "../viewport.mjs";
 import { getTokenCenterY, toOffset, fromOffset } from "../decisions/picker-offsets.mjs";
@@ -6,8 +6,8 @@ import { getTokenCenterY, toOffset, fromOffset } from "../decisions/picker-offse
 /*
  * Where the gallery picker is. The trigger gives the default place (picker-placement.mjs): left of the Token HUD
  * button with the picker center on the token center, or the viewport center for the hotbar. If the user dragged the
- * picker, a saved offset shifts the default place (picker-offsets.mjs). There is one offset for each reference of the
- * context ("token" for the Token HUD, "screen" for the hotbar). In every case the picker stays inside the viewport.
+ * picker, a saved offset shifts the default place (picker-offsets.mjs). There is one offset for each trigger point.
+ * In every case the picker stays inside the viewport.
  *
  * The placement runs at the open and again after each pan, zoom, token move, HUD render, window resize, and
  * navigation, so a moved picker follows the trigger exactly as a picker at its default place does.
@@ -25,7 +25,7 @@ import { getTokenCenterY, toOffset, fromOffset } from "../decisions/picker-offse
 export function placePicker(picker, context) {
   const rect = picker.getBoundingClientRect();
   const base = getDefaultPlace(context, rect);
-  const offset = getPickerOffsets()[context.positionReference];
+  const offset = getPickerOffset(context.trigger);
   let target = rect;
   if ( base ) target = offset ? fromOffset(offset, base) : base;
   placeInViewport(picker, {...target, width: rect.width, height: rect.height});
@@ -33,10 +33,10 @@ export function placePicker(picker, context) {
 
 /**
  * @param {PickerContext} context
- * @returns {boolean}  Did the user drag the picker for the reference of this context?
+ * @returns {boolean}  Did the user drag the picker for the trigger point of this context?
  */
 export function isPickerMoved(context) {
-  return getPickerOffsets()[context.positionReference] !== null;
+  return getPickerOffset(context.trigger) !== null;
 }
 
 /**
@@ -48,30 +48,30 @@ export function isPickerMoved(context) {
 export async function savePickerPosition(rect, context) {
   const base = getDefaultPlace(context, rect);
   if ( !base ) return false;
-  await setPickerOffset(context.positionReference, toOffset(rect, base));
+  await setPickerOffset(context.trigger, toOffset(rect, base));
   return true;
 }
 
 /**
- * Go back to the default place, for the reference of the context. The other reference keeps its position.
+ * Go back to the default place, for the trigger point of the context. The other trigger point keeps its position.
  * @param {PickerContext} context
  */
 export function resetPickerPosition(context) {
-  return setPickerOffset(context.positionReference, null);
+  return setPickerOffset(context.trigger, null);
 }
 
 /**
  * @param {PickerContext} context
  * @param {{width: number, height: number}} size  The picker size.
- * @returns {{left: number, top: number}|null}  The default place now, not clamped: the viewport center, or left of the
- *                                             trigger and centered on the token or on the trigger. Null if the
- *                                             trigger is gone.
+ * @returns {{left: number, top: number}|null}  The default place now, not clamped: the viewport center for the hotbar,
+ *                                             or left of the HUD button and centered on the token (on the button if
+ *                                             the token is not on the screen). Null if the HUD button is gone.
  */
 function getDefaultPlace(context, size) {
-  if ( context.placement === "center" ) return getViewportCenter(size, getViewportSize());
+  if ( context.trigger === "hotbar" ) return getViewportCenter(size, getViewportSize());
   const anchor = context.getAnchorRect();
   if ( !anchor ) return null;
-  const token = (context.positionReference === "token") ? context.getTokenRect() : null;
+  const token = context.getTokenRect();
   const centerY = token ? getTokenCenterY(token) : (anchor.top + (anchor.height / 2));
   return getBesideTrigger(anchor, centerY, size);
 }
