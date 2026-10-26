@@ -39,7 +39,7 @@ Then enable **Token Hover Art** in your world under **Game Settings → Manage M
    - **Image tile or "No hover art":** the macro sets that hover art at once, with no picker. Its icon is the image (a video shows the core video icon).
 
    A shortcut works also for a token on a scene that you do not view. A second drop of the same tile reuses the macro. GMs can turn shortcuts off with the setting **Hotbar shortcuts**.
-9. To move or resize the hover art: hover a token so the image shows, then hold **Ctrl**. The image gets a dashed outline, corner handles, and stays open. Drag the image to move it, or drag a corner handle to resize it. A resize keeps the aspect ratio of each image, and the opposite corner stays in place. The position and size apply only to you. To go back to the corner and the maximum height, turn off **Use my dragged position and size** in the module settings.
+9. To move or resize the hover art: hover a token so the image shows, then hold **Ctrl** (you can change this key in **Configure Controls**, as "Move or resize the hover art"). The image gets a dashed outline, corner handles, and stays open. Drag the image to move it, or drag a corner handle to resize it. A resize keeps the aspect ratio of each image, and the opposite corner stays in place. The position and size apply only to you. To go back to the corner and the maximum height, turn off **Use my dragged position and size** in the module settings.
 
 ## Folder filters
 

@@ -9,7 +9,7 @@ import { getViewportSize, moveInViewport } from "../viewport.mjs";
 /*
  * The layout of the hover display: where it is and how large its image is.
  * The default is a screen corner (world setting) and the world maximum height. Each user can move and resize the
- * display while they hold Ctrl (see hover-display.mjs). The result is saved for this user, and it replaces the
+ * display while they hold the move key (see hover-display.mjs). The result is saved for this user, and it replaces the
  * default while the client setting "Use my dragged position and size" is on.
  *
  * A dragged position is an EdgePosition (see screen-geometry.mjs). A dragged size is the image height as a fraction

@@ -4,19 +4,20 @@ import {
 import { getSelectedArt, canViewArt, isVideo } from "../data/gallery-data.mjs";
 import { canSeeNameOnHover } from "../decisions/gallery-rules.mjs";
 import { log } from "../output.mjs";
+import { MODULE_ID } from "../constants.mjs";
 
 /*
  * The hover display is local to each client. Foundry fires the hoverToken hook only on the client of the user
  * who moves the mouse, and each client already has the token flags, because Foundry sends every document update
  * to all clients. So the display needs no socket messages.
  *
- * Move mode: while the user holds Ctrl, the display stays open, and the user can drag it to a new position or
- * resize it with its corner handles (see display-layout.mjs). Without move mode, the display would hide when the
- * pointer leaves the token on its way to the display.
+ * Move mode: while the user holds the move key (Ctrl by default), the display stays open, and the user can drag it to
+ * a new position or resize it with its corner handles (see display-layout.mjs). Without move mode, the display would
+ * hide when the pointer leaves the token on its way to the display.
  */
 
-/** The key that turns on move mode while it is held. */
-const MOVE_KEY = "Control";
+/** The keybinding of move mode. The user can change the key in Configure Controls. */
+const MOVE_KEYBINDING = "moveDisplay";
 
 /**
  * @typedef {object} Timers
@@ -58,16 +59,27 @@ export class HoverDisplay {
   }
 
   /**
-   * Listen for the move key. Call this once, at init.
+   * Register the move key, as core registers its "highlight" key (client/core/keybindings.js:347). Call this once, at
+   * init. Core runs no keybinding while a text field has the focus, and it releases the held keys (with onUp) when a
+   * form element gets the focus (client/core/keyboard.js:412). The handlers return false, so other actions of the key
+   * still run.
    */
   activateMoveKey() {
-    window.addEventListener("keydown", event => {
-      if ( event.key === MOVE_KEY ) this.#setMoveMode(true);
+    game.keybindings.register(MODULE_ID, MOVE_KEYBINDING, {
+      name: "TOKEN_HOVER_ART.Keybindings.MoveDisplay.Name",
+      hint: "TOKEN_HOVER_ART.Keybindings.MoveDisplay.Hint",
+      editable: [{key: "ControlLeft"}, {key: "ControlRight"}],
+      onDown: () => {
+        this.#setMoveMode(true);
+        return false;
+      },
+      onUp: () => {
+        this.#setMoveMode(false);
+        return false;
+      }
     });
-    window.addEventListener("keyup", event => {
-      if ( event.key === MOVE_KEY ) this.#setMoveMode(false);
-    });
-    // The browser sends no keyup when the window loses focus while the key is held.
+    // The browser sends no keyup when the window loses the focus while the key is held. Core has no blur handler: it
+    // forgets its held keys only when the page is hidden, and without onUp (client/core/keyboard.js:19, :352).
     window.addEventListener("blur", () => this.#setMoveMode(false));
   }
 
