@@ -1,79 +1,52 @@
 import { TEMPLATES } from "./constants.mjs";
 import { registerSettings } from "./settings.mjs";
 import { addColorFields } from "./color-fields.mjs";
-import { getBaseActor, canManageGallery, hasModuleFlagChange } from "./hover-art-data.mjs";
+import { hasModuleFlagChange } from "./data/gallery-data.mjs";
 import { HoverArtGallery } from "./gallery-sheet.mjs";
-import { loadPaletteTemplate, onRenderTokenHUD, refreshTokenHUD } from "./token-hud.mjs";
-import {
-  activateMoveKey, onHoverToken, refreshTokenDisplay, onDeleteToken, preloadSceneArt, refreshDisplay, hideDisplay
-} from "./hover-display.mjs";
-import { preloadTemplates } from "./compat.mjs";
+import { addHeaderButton, addHeaderControl } from "./sheet-header-buttons.mjs";
+import { GalleryPicker } from "./picker/gallery-picker.mjs";
+import { HudTrigger } from "./triggers/hud-trigger.mjs";
+import { DisplayLayout } from "./hover/display-layout.mjs";
+import { HoverDisplay } from "./hover/hover-display.mjs";
+import { findByUuid, preloadTemplates } from "./compat.mjs";
+
+const timers = {setTimeout: (fn, ms) => window.setTimeout(fn, ms), clearTimeout: id => window.clearTimeout(id)};
+const openManager = actor => HoverArtGallery.open(actor);
+
+const hoverDisplay = new HoverDisplay({layout: new DisplayLayout(), timers});
+
+const picker = new GalleryPicker({
+  resolveToken: findByUuid,
+  openManager,
+  onStateChange: () => hudTrigger.syncButton()
+});
+const hudTrigger = new HudTrigger({picker});
 
 Hooks.once("init", () => {
-  registerSettings(refreshDisplay);
+  registerSettings(() => hoverDisplay.refresh());
   preloadTemplates([TEMPLATES.GALLERY_SHEET]);
-  loadPaletteTemplate();
-  activateMoveKey();
+  picker.loadTemplate();
+  hoverDisplay.activateMoveKey();
 });
 
 Hooks.on("renderSettingsConfig", addColorFields);
 
-/* -------------------------------------------- */
-/*  Actor sheet button                          */
-/* -------------------------------------------- */
+Hooks.on("getActorSheetHeaderButtons", (sheet, buttons) => addHeaderButton(sheet, buttons, openManager));
+Hooks.on("getHeaderControlsActorSheetV2", (sheet, controls) => addHeaderControl(sheet, controls, openManager));
 
-/**
- * @param {Actor} sheetActor  The Actor of an actor sheet.
- * @returns {Actor|null}      The base Actor, if the current user may manage its gallery.
- */
-function getGalleryActor(sheetActor) {
-  return canManageGallery(sheetActor) ? getBaseActor(sheetActor) : null;
-}
+Hooks.on("renderTokenHUD", (hud, html) => hudTrigger.onRenderTokenHUD(hud, html));
 
-/**
- * Add a "Hover Art" button to the header of Application V1 actor sheets (all sheets in v11 and v12, and the V1
- * sheets that some systems still use in v13). Only users who may manage the gallery see it (see
- * canManageGallery). For an unlinked token, it opens the gallery of the base Actor.
- */
-Hooks.on("getActorSheetHeaderButtons", (sheet, buttons) => {
-  const actor = getGalleryActor(sheet.actor);
-  if ( !actor ) return;
-  buttons.unshift({
-    label: "TOKEN_HOVER_ART.Gallery.Button",
-    class: "token-hover-art",
-    icon: "fas fa-images",
-    onclick: () => HoverArtGallery.open(actor)
-  });
-});
-
-/**
- * The same button for ApplicationV2 actor sheets. Core fires this hook from v13; v12 ApplicationV2 has no
- * header controls hook, so the hook does nothing there.
- */
-Hooks.on("getHeaderControlsActorSheetV2", (sheet, controls) => {
-  const actor = getGalleryActor(sheet.actor);
-  if ( !actor ) return;
-  controls.push({
-    action: "tokenHoverArtGallery",
-    icon: "fas fa-images",
-    label: "TOKEN_HOVER_ART.Gallery.Button",
-    onClick: () => HoverArtGallery.open(actor)
-  });
-});
-
-/* -------------------------------------------- */
-/*  Token HUD and hover display                 */
-/* -------------------------------------------- */
-
-/** A change of the token's art or secret state, by any user, updates the HUD palette and the hover display. */
+/** A change of the token's art or secret state, by any user, updates the picker and the hover display. */
 Hooks.on("updateToken", (tokenDoc, change) => {
-  if ( !hasModuleFlagChange(change) ) return;
-  refreshTokenHUD(tokenDoc);
-  refreshTokenDisplay(tokenDoc);
+  picker.onUpdateToken(tokenDoc, change);
+  if ( hasModuleFlagChange(change) ) hoverDisplay.refreshToken(tokenDoc);
+});
+Hooks.on("updateActor", (actor, change) => picker.onUpdateActor(actor, change));
+Hooks.on("deleteToken", tokenDoc => {
+  picker.onDeleteToken(tokenDoc);
+  hoverDisplay.onDeleteToken(tokenDoc);
 });
 
-Hooks.on("renderTokenHUD", onRenderTokenHUD);
-Hooks.on("hoverToken", onHoverToken);
-Hooks.on("deleteToken", onDeleteToken);
-Hooks.on("canvasReady", preloadSceneArt);
-Hooks.on("canvasTearDown", hideDisplay);
+Hooks.on("hoverToken", (token, hovered) => hoverDisplay.onHoverToken(token, hovered));
+Hooks.on("canvasReady", () => hoverDisplay.preloadScene());
+Hooks.on("canvasTearDown", () => hoverDisplay.hide());

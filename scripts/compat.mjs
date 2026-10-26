@@ -54,6 +54,26 @@ export function hasVideoExtension(path) {
 }
 
 /**
+ * Find a document by its UUID without a server request. v13 also offers it in foundry.utils.
+ * @param {string} uuid
+ * @returns {foundry.abstract.Document|null}
+ */
+export function findByUuid(uuid) {
+  const fn = foundry.utils.fromUuidSync ?? fromUuidSync;
+  return fn(uuid) ?? null;
+}
+
+/**
+ * The left column of the Token HUD. The only selector into the core HUD markup (FOUNDRY_MODULE_RULES.md 8.3).
+ * It is "div.col.left" in v11 (templates/hud/token-hud.html) and later versions.
+ * @param {HTMLElement|jQuery} html  The element of the renderTokenHUD hook.
+ * @returns {HTMLElement|null}
+ */
+export function getTokenHudColumn(html) {
+  return getHookElement(html).querySelector(".col.left");
+}
+
+/**
  * Get the root HTML element of a render hook. Application V1 hooks pass a jQuery object;
  * ApplicationV2 hooks (the Token HUD from v13) pass an HTMLElement.
  * @param {HTMLElement|jQuery} html

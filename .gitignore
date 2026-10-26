@@ -1,3 +1,6 @@
+# Development tools
+node_modules/
+
 # Local build output
 module.zip
 dist/

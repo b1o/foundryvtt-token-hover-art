@@ -1,13 +1,14 @@
-import { MODULE_ID, SETTINGS, TEMPLATES } from "./constants.mjs";
-import { getSetting } from "./settings.mjs";
+import { MODULE_ID, TEMPLATES } from "./constants.mjs";
+import { getDefaultFilter } from "./settings.mjs";
 import {
   getBaseActor, canManageGallery, getManualImages, setManualImages, getFolderSources, getDefaultArt, setDefaultArt,
   clearDefaultArt, isDefaultSecret, setDefaultSecret, isVideo
-} from "./hover-art-data.mjs";
+} from "./data/gallery-data.mjs";
 import {
   canScanFolders, addFolderSource, setFolderFilter, removeFolderSource, rescanFolderSources
-} from "./folder-sources.mjs";
+} from "./data/folder-sources.mjs";
 import { getDocumentSheetClass, getFilePickerClass } from "./compat.mjs";
+import { notify, reportActionError } from "./output.mjs";
 
 /**
  * The window where owners and GMs manage the hover art gallery of an Actor.
@@ -42,13 +43,11 @@ export class HoverArtGallery extends getDocumentSheetClass() {
    * @returns {HoverArtGallery|null}
    */
   static open(actor) {
-    if ( !canManageGallery(actor) ) return null;
+    if ( !canManageGallery(actor, game.user) ) return null;
     const baseActor = getBaseActor(actor);
     const app = Object.values(baseActor.apps).find(a => a instanceof HoverArtGallery) ?? new HoverArtGallery(baseActor);
     app.render(true, {focus: true});
-    if ( canScanFolders() ) {
-      rescanFolderSources(baseActor).catch(err => console.warn("token-hover-art | Folder rescan failed", err));
-    }
+    if ( canScanFolders() ) rescanFolderSources(baseActor).then(reportFailedFolders, reportActionError);
     return app;
   }
 
@@ -58,7 +57,7 @@ export class HoverArtGallery extends getDocumentSheetClass() {
    * @override
    */
   _canUserView(user) {
-    return super._canUserView(user) && canManageGallery(this.document);
+    return super._canUserView(user) && canManageGallery(this.document, user);
   }
 
   /** @override */
@@ -67,7 +66,7 @@ export class HoverArtGallery extends getDocumentSheetClass() {
   }
 
   /** @override */
-  getData(options = {}) {
+  getData() {
     const actor = this.document;
     const defaultArt = getDefaultArt(actor);
     const toImage = path => ({path, isVideo: isVideo(path), isDefault: path === defaultArt});
@@ -77,7 +76,7 @@ export class HoverArtGallery extends getDocumentSheetClass() {
       canBrowse: game.user.can("FILES_BROWSE"),
       canUpload: game.user.can("FILES_UPLOAD"),
       canScan: this.isEditable && canScanFolders(),
-      defaultFilter: getSetting(SETTINGS.DEFAULT_FILTER),
+      defaultFilter: getDefaultFilter(),
       defaultSecret: isDefaultSecret(actor),
       manualImages: manual.map((path, index) => ({
         ...toImage(path),
@@ -154,7 +153,7 @@ export class HoverArtGallery extends getDocumentSheetClass() {
    * DocumentSheet default, which would write the form fields into the Actor.
    * @override
    */
-  async _updateObject(event, formData) {}
+  async _updateObject(_event, _formData) {}
 
   /* -------------------------------------------- */
 
@@ -168,7 +167,7 @@ export class HoverArtGallery extends getDocumentSheetClass() {
     try {
       await handler.call(this, event);
     } catch(err) {
-      ui.notifications.error(err.message);
+      reportActionError(err);
     }
   }
 
@@ -243,7 +242,7 @@ export class HoverArtGallery extends getDocumentSheetClass() {
   async #addImage(path) {
     const images = getManualImages(this.document);
     if ( images.includes(path) ) {
-      ui.notifications.info("TOKEN_HOVER_ART.Gallery.AlreadyAdded", {localize: true});
+      notify.info("TOKEN_HOVER_ART.Gallery.AlreadyAdded");
       return;
     }
     return setManualImages(this.document, [...images, path]);
@@ -324,12 +323,23 @@ export class HoverArtGallery extends getDocumentSheetClass() {
   async #addFolder(data) {
     await addFolderSource(this.document, data);
     const added = getFolderSources(this.document).at(-1);
-    ui.notifications.info(game.i18n.format("TOKEN_HOVER_ART.Folders.Added", {count: added.files.length}));
+    notify.info("TOKEN_HOVER_ART.Folders.Added", {count: added.files.length});
   }
 
   async #rescanFolders() {
-    const changed = await rescanFolderSources(this.document);
-    const key = changed ? "TOKEN_HOVER_ART.Folders.RescanChanged" : "TOKEN_HOVER_ART.Folders.RescanUnchanged";
-    ui.notifications.info(key, {localize: true});
+    const result = await rescanFolderSources(this.document);
+    if ( reportFailedFolders(result) ) return;
+    notify.info(result.changed ? "TOKEN_HOVER_ART.Folders.RescanChanged" : "TOKEN_HOVER_ART.Folders.RescanUnchanged");
   }
+}
+
+/**
+ * Tell the user which folders a scan could not read. The folders keep their last file list.
+ * @param {import("./data/folder-sources.mjs").RescanResult} result
+ * @returns {boolean}  Did a folder fail?
+ */
+function reportFailedFolders({failedFolders}) {
+  if ( !failedFolders.length ) return false;
+  notify.warn("TOKEN_HOVER_ART.Folders.ScanFailed", {folders: failedFolders.join(", ")});
+  return true;
 }

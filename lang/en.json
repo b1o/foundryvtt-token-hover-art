@@ -65,13 +65,19 @@
   "TOKEN_HOVER_ART.Folders.AlreadyAdded": "This folder with this filter is already in the gallery.",
   "TOKEN_HOVER_ART.Folders.NoFolder": "Type or select a folder.",
   "TOKEN_HOVER_ART.Folders.FilterHasSlash": "The filter applies to file names only. Remove the \"/\" from the filter.",
+  "TOKEN_HOVER_ART.Folders.ScanFailed": "Cannot scan these folders: {folders}. They keep their last file list. Check that the folders exist, then scan again.",
 
-  "TOKEN_HOVER_ART.HUD.Toggle": "Hover Art",
-  "TOKEN_HOVER_ART.HUD.Title": "Hover Art",
-  "TOKEN_HOVER_ART.HUD.None": "No hover art",
-  "TOKEN_HOVER_ART.HUD.Empty": "The gallery is empty.",
-  "TOKEN_HOVER_ART.HUD.Manage": "Manage gallery",
-  "TOKEN_HOVER_ART.HUD.Resize": "Drag to resize",
-  "TOKEN_HOVER_ART.HUD.SecretOn": "Secret: only GMs and owners see this hover art. Click to show it to all users.",
-  "TOKEN_HOVER_ART.HUD.SecretOff": "Visible to all users. Click to make it secret."
+  "TOKEN_HOVER_ART.Picker.Open": "Hover Art",
+  "TOKEN_HOVER_ART.Picker.Title": "Hover Art: {name}",
+  "TOKEN_HOVER_ART.Picker.Close": "Close",
+  "TOKEN_HOVER_ART.Picker.None": "No hover art",
+  "TOKEN_HOVER_ART.Picker.Empty": "The gallery is empty.",
+  "TOKEN_HOVER_ART.Picker.Manage": "Manage gallery",
+  "TOKEN_HOVER_ART.Picker.Resize": "Drag to resize",
+  "TOKEN_HOVER_ART.Picker.SecretOn": "Secret: only GMs and owners see this hover art. Click to show it to all users.",
+  "TOKEN_HOVER_ART.Picker.SecretOff": "Visible to all users. Click to make it secret.",
+
+  "TOKEN_HOVER_ART.Errors.TokenMissing": "The token no longer exists. Open the hover art from the Token HUD of a token.",
+  "TOKEN_HOVER_ART.Errors.NotOwner": "You do not own this token, so you cannot change its hover art. Ask the GM for ownership.",
+  "TOKEN_HOVER_ART.Errors.NotInGallery": "This image is no longer in the gallery of the actor. Select another image."
 }

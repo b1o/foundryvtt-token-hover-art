@@ -1,7 +1,7 @@
-import { SETTINGS } from "./constants.mjs";
-import { getSetting } from "./settings.mjs";
-import { getFolderSources, setFolderSources } from "./hover-art-data.mjs";
-import { getFilePickerClass } from "./compat.mjs";
+import { getDefaultFilter } from "../settings.mjs";
+import { getFolderSources, setFolderSources } from "./gallery-data.mjs";
+import { getFilePickerClass } from "../compat.mjs";
+import { log } from "../output.mjs";
 
 /*
  * Folder sources use the core wildcard browse, the same mechanism as "Randomize Wildcard Images" on tokens.
@@ -31,7 +31,7 @@ export function canScanFolders() {
  * @throws {Error}     If the filter contains a "/". The filter matches file names, not paths.
  */
 export function normalizeFilter(filter) {
-  const value = (filter ?? "").trim() || getSetting(SETTINGS.DEFAULT_FILTER);
+  const value = (filter ?? "").trim() || getDefaultFilter();
   if ( value.includes("/") ) throw new Error(game.i18n.localize("TOKEN_HOVER_ART.Folders.FilterHasSlash"));
   return value;
 }
@@ -90,29 +90,35 @@ export function removeFolderSource(actor, index) {
 }
 
 /**
+ * @typedef {object} RescanResult
+ * @property {boolean} changed           Did a file list change?
+ * @property {string[]} failedFolders    The folders that could not be scanned. They keep their last result.
+ */
+
+/**
  * Scan all folder sources again. Write to the Actor only if a file list changed, because each write
- * sends an update to all clients and renders the sheets and the HUD again.
- * A folder that cannot be scanned keeps its last result, and the error goes to the console.
+ * sends an update to all clients and renders the sheets and the pickers again.
+ * A folder that cannot be scanned keeps its last result. The caller tells the user about it.
  * @param {Actor} actor
- * @returns {Promise<boolean>}  Did a file list change?
+ * @returns {Promise<RescanResult>}
  */
 export async function rescanFolderSources(actor) {
   const folders = getFolderSources(actor);
-  if ( !folders.length ) return false;
-  let changed = false;
+  const result = {changed: false, failedFolders: []};
   const scanned = [];
   for ( const entry of folders ) {
     let files = entry.files;
     try {
       files = await scanFolder(entry);
     } catch(err) {
-      console.warn(`token-hover-art | Cannot scan folder "${entry.folder}"`, err);
+      log.warn(`Cannot scan the folder "${entry.folder}".`, err);
+      result.failedFolders.push(entry.folder);
     }
-    if ( !sameFiles(files, entry.files) ) changed = true;
+    if ( !sameFiles(files, entry.files) ) result.changed = true;
     scanned.push({...entry, files});
   }
-  if ( changed ) await setFolderSources(actor, scanned);
-  return changed;
+  if ( result.changed ) await setFolderSources(actor, scanned);
+  return result;
 }
 
 /* -------------------------------------------- */

@@ -4,6 +4,7 @@
 /* The module colors come from the core CSS variables. Each fallback is the v11 value, for a core version that
    renames or removes a variable. The selectors use only module classes, not core ids such as #token-hud. */
 .tha-control,
+.tha-picker,
 #token-hover-art-display,
 .token-hover-art {
   --tha-text-1: var(--color-text-light-1, #eee);
@@ -18,77 +19,107 @@
 }
 
 /* ---------------------------------------- */
-/* Token HUD palette                        */
+/* Token HUD button                         */
+/* ---------------------------------------- */
+/* The trigger is a native button, so it gets the core button style too. These rules give it the look of the
+   core .control-icon elements of the HUD again. */
+.placeable-hud button.control-icon.tha-control {
+  height: 40px;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.placeable-hud button.control-icon.tha-control:focus-visible {
+  outline: 2px solid var(--tha-highlight);
+}
+
+/* ---------------------------------------- */
+/* Gallery picker                           */
 /* The look copies the core status effects  */
 /* palette of the Token HUD.                */
 /* ---------------------------------------- */
-.control-icon.tha-control {
-  position: relative;
-}
-
-/* The template sets --tha-palette-width and --tha-palette-height from the paletteSize client setting. */
-.tha-control .tha-palette {
-  visibility: hidden;
-  position: absolute;
-  right: 65px;
-  top: 0;
-  width: var(--tha-palette-width);
+/* gallery-picker.mjs sets left and top, and --tha-picker-width and --tha-picker-height from the picker size
+   client setting. The picker is above the windows and below the tooltips. */
+.tha-picker {
+  position: fixed;
+  z-index: calc(var(--z-index-tooltip, 9999) - 1);
+  width: var(--tha-picker-width);
   padding: 4px 4px 10px;
   box-sizing: content-box;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.75);
   box-shadow: 0 0 15px var(--tha-shadow);
   border: 1px solid var(--tha-border-dark);
   border-radius: 4px;
-  pointer-events: all;
-  cursor: default;
+  color: var(--tha-text-2);
   font-size: var(--font-size-14, 0.875rem);
   line-height: normal;
   text-align: left;
 }
 
-.tha-control .tha-palette.active {
-  visibility: visible;
+.tha-picker[hidden] {
+  display: none;
 }
 
-.tha-control .tha-palette-header {
+.tha-picker-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 0 2px 4px;
-  color: var(--tha-text-2);
 }
 
-.tha-control .tha-palette-title {
+.tha-picker-title {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: bold;
 }
 
-.tha-control .tha-palette-button {
-  width: 22px;
-  text-align: center;
-  color: var(--tha-text-5);
+/* Core gives buttons a width of 100%, a border, a background, and a line height. The picker buttons reset them. */
+.tha-picker button {
+  margin: 0;
+  padding: 0;
+  font-family: inherit;
+  line-height: normal;
   cursor: pointer;
 }
 
-.tha-control .tha-palette-button:hover,
-.tha-control .tha-palette-button.active {
-  color: var(--tha-text-1);
+.tha-picker .tha-picker-button {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  color: var(--tha-text-5);
 }
 
-/* The column count follows the palette width. The stable gutter keeps space for the vertical scrollbar,
+.tha-picker .tha-picker-button:hover,
+.tha-picker .tha-picker-button.active {
+  color: var(--tha-text-1);
+  box-shadow: none;
+}
+
+.tha-picker button:focus-visible {
+  outline: 2px solid var(--tha-highlight);
+  outline-offset: -2px;
+}
+
+/* The column count follows the picker width. The stable gutter keeps space for the vertical scrollbar,
    so the scrollbar never pushes the last column out and causes a horizontal scrollbar. */
-.tha-control .tha-palette-grid {
+.tha-picker-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, 68px);
   gap: 6px;
-  max-height: var(--tha-palette-height);
+  max-height: var(--tha-picker-height);
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-gutter: stable;
 }
 
-.tha-control .tha-palette-resize {
+.tha-picker-resize {
   position: absolute;
   left: 0;
   bottom: 0;
@@ -101,11 +132,11 @@
   touch-action: none;
 }
 
-.tha-control .tha-palette-resize:hover {
+.tha-picker-resize:hover {
   opacity: 1;
 }
 
-.tha-control .tha-choice {
+.tha-picker .tha-choice {
   width: 68px;
   height: 68px;
   display: flex;
@@ -115,37 +146,38 @@
   border-radius: 4px;
   overflow: hidden;
   opacity: 0.6;
-  cursor: pointer;
   background: rgba(0, 0, 0, 0.4);
+  color: var(--tha-text-5);
 }
 
-.tha-control .tha-choice:hover {
+.tha-picker .tha-choice:hover,
+.tha-picker .tha-choice:focus-visible {
   opacity: 0.85;
+  box-shadow: none;
 }
 
-.tha-control .tha-choice.active {
+.tha-picker .tha-choice.active {
   opacity: 1;
   border-color: var(--tha-highlight);
   box-shadow: 0 0 6px var(--tha-glow);
 }
 
-/* Core styles "img" in HUD control icons (margin, opacity). This rule restores the thumbnail look. */
-.tha-control .tha-choice img,
-.tha-control .tha-choice video {
+/* Core gives every img a border. This rule restores the thumbnail look. */
+.tha-picker .tha-choice img,
+.tha-picker .tha-choice video {
   width: 100%;
   height: 100%;
   margin: 0;
   object-fit: cover;
-  opacity: 1;
   border: none;
+  pointer-events: none;
 }
 
-.tha-control .tha-choice-none {
+.tha-picker .tha-choice-none {
   font-size: var(--font-size-24, 1.5rem);
-  color: var(--tha-text-5);
 }
 
-.tha-control .tha-palette-empty {
+.tha-picker-empty {
   margin: 6px 2px 2px;
   color: var(--tha-text-5);
 }

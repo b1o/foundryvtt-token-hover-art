@@ -1,0 +1,44 @@
+<header class="tha-picker-header">
+  <span class="tha-picker-title">{{localize "TOKEN_HOVER_ART.Picker.Title" name=tokenName}}</span>
+  {{#if isGM}}
+  <button type="button" class="tha-picker-button {{#if secret}}active{{/if}}" data-tha-action="secret"
+          aria-pressed="{{#if secret}}true{{else}}false{{/if}}"
+          aria-label="{{localize (ifThen secret "TOKEN_HOVER_ART.Picker.SecretOn" "TOKEN_HOVER_ART.Picker.SecretOff")}}"
+          data-tooltip="{{#if secret}}TOKEN_HOVER_ART.Picker.SecretOn{{else}}TOKEN_HOVER_ART.Picker.SecretOff{{/if}}">
+    <i class="fas {{#if secret}}fa-eye-slash{{else}}fa-eye{{/if}}" aria-hidden="true"></i>
+  </button>
+  {{/if}}
+  {{#if canManage}}
+  <button type="button" class="tha-picker-button" data-tha-action="manage"
+          aria-label="{{localize "TOKEN_HOVER_ART.Picker.Manage"}}" data-tooltip="TOKEN_HOVER_ART.Picker.Manage">
+    <i class="fas fa-cog" aria-hidden="true"></i>
+  </button>
+  {{/if}}
+  <button type="button" class="tha-picker-button" data-tha-action="close"
+          aria-label="{{localize "TOKEN_HOVER_ART.Picker.Close"}}" data-tooltip="TOKEN_HOVER_ART.Picker.Close">
+    <i class="fas fa-times" aria-hidden="true"></i>
+  </button>
+</header>
+<div class="tha-picker-grid">
+  <button type="button" class="tha-choice tha-choice-none {{#unless hasSelection}}active{{/unless}}"
+          data-tha-action="clear" data-tha-focus-key="none"
+          aria-pressed="{{#if hasSelection}}false{{else}}true{{/if}}"
+          aria-label="{{localize "TOKEN_HOVER_ART.Picker.None"}}" data-tooltip="TOKEN_HOVER_ART.Picker.None">
+    <i class="fas fa-ban" aria-hidden="true"></i>
+  </button>
+  {{#each images}}
+  <button type="button" class="tha-choice {{#if active}}active{{/if}}" data-tha-action="select"
+          data-path="{{path}}" data-tha-focus-key="{{path}}"
+          aria-pressed="{{#if active}}true{{else}}false{{/if}}" aria-label="{{name}}">
+    {{#if isVideo}}
+    <video src="{{path}}" muted loop autoplay playsinline aria-hidden="true"></video>
+    {{else}}
+    <img src="{{path}}" alt="" loading="lazy">
+    {{/if}}
+  </button>
+  {{/each}}
+</div>
+{{#unless images.length}}
+<p class="tha-picker-empty">{{localize "TOKEN_HOVER_ART.Picker.Empty"}}</p>
+{{/unless}}
+<div class="tha-picker-resize" aria-hidden="true" data-tooltip="TOKEN_HOVER_ART.Picker.Resize"></div>

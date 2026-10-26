@@ -29,8 +29,8 @@ Then enable **Token Hover Art** in your world under **Game Settings → Manage M
    - **Add image:** one image.
    - **Add folder:** a folder and a file name filter. All matching images in that folder join the gallery.
 3. Optional: click the star to make an image the default for new tokens of this actor.
-4. Right-click a token. Click the **images** icon in the left column of the Token HUD. Then select an image, or select the "no hover art" tile. Drag the grip in the bottom-left corner of the palette to resize it; each user keeps their own size.
-5. GMs can click the eye icon in the palette to make the hover art secret. Only GMs and owners see secret hover art.
+4. Right-click a token. Click the **images** icon in the left column of the Token HUD. The hover art picker opens next to the button. Select an image, or select the "no hover art" tile. Drag the grip in the bottom-left corner of the picker to resize it; each user keeps their own size. Close the picker with its close button, with Escape, with a click outside of it, or with the HUD button again. The keyboard also works: Tab moves between the tiles, and Enter or Space selects one.
+5. GMs can click the eye icon in the picker to make the hover art secret. Only GMs and owners see secret hover art.
 6. To move or resize the hover art: hover a token so the image shows, then hold **Ctrl**. The image gets a dashed outline, corner handles, and stays open. Drag the image to move it, or drag a corner handle to resize it. A resize keeps the aspect ratio of each image, and the opposite corner stays in place. The position and size apply only to you. To go back to the corner and the maximum height, turn off **Use my dragged position and size** in the module settings.
 
 ## Folder filters
@@ -81,6 +81,18 @@ The module supports Foundry VTT v11 and later. `scripts/compat.mjs` holds every 
 
 Known future change: the gallery window uses Application V1, because ApplicationV2 does not exist in v11. Application V1 is deprecated since v13. When a later core version removes it, the gallery window must move to ApplicationV2.
 
+## Development
+
+The module has no build step. The development tools need Node 24 (pinned with Volta in `package.json`).
+
+```
+npm install
+npm run lint
+npm test
+```
+
+The unit tests cover the pure modules in `scripts/decisions/`. They run without Foundry.
+
 ## Release a new version
 
 1. In `module.json`, set `version` (for example `0.4.0`), and set `download` to the same tag: `.../releases/download/v0.4.0/module.zip`.
@@ -107,7 +119,7 @@ The release workflow then checks that the tag matches `module.json`, builds `mod
 | Use my dragged position and size | Client (turned on by a Ctrl-drag) | Off |
 | Dragged position | Client (hidden, set with Ctrl-drag) | None |
 | Dragged size (image height, % of screen) | Client (hidden, set with a Ctrl corner drag) | None |
-| Palette size | Client (hidden, set with the resize grip) | 228 × 290 px |
+| Picker size | Client (hidden, set with the resize grip) | 228 × 290 px |
 
 The color settings accept `#rrggbb` or `#rrggbbaa`; the last two digits are the opacity. In the settings window, each color has a color picker and an opacity slider next to the text field. An invalid value falls back to the default.
 

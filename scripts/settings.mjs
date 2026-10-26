@@ -1,4 +1,6 @@
 import { MODULE_ID, SETTINGS, POSITIONS } from "./constants.mjs";
+import { isEdgePosition } from "./decisions/screen-geometry.mjs";
+import { clampPickerSize, DEFAULT_PICKER_SIZE } from "./decisions/picker-placement.mjs";
 
 /**
  * The color settings, with their defaults. The defaults give the original look of the display
@@ -130,7 +132,7 @@ export function registerSettings(onDisplayChange) {
     onChange: onDisplayChange
   });
 
-  // The position that this user dragged the display to. See display-layout.mjs for the format.
+  // The position that this user dragged the display to: an EdgePosition (see screen-geometry.mjs).
   game.settings.register(MODULE_ID, SETTINGS.CUSTOM_POSITION, {
     scope: "client",
     config: false,
@@ -148,29 +150,89 @@ export function registerSettings(onDisplayChange) {
     onChange: onDisplayChange
   });
 
-  // The size of the HUD palette. Each user sets it with the resize grip of the palette.
-  game.settings.register(MODULE_ID, SETTINGS.PALETTE_SIZE, {
+  // The grid size of the gallery picker. Each user sets it with the resize grip of the picker.
+  game.settings.register(MODULE_ID, SETTINGS.PICKER_SIZE, {
     scope: "client",
     config: false,
     type: Object,
-    default: {width: 228, height: 290}
+    default: {...DEFAULT_PICKER_SIZE}
   });
 }
 
+const get = key => game.settings.get(MODULE_ID, key);
+const set = (key, value) => game.settings.set(MODULE_ID, key, value);
+
+/** @returns {string}  A value of POSITIONS: the screen corner of the hover display. */
+export const getDisplayCorner = () => get(SETTINGS.POSITION);
+
+/** @returns {number}  The maximum image height of the hover display, in percent of the screen height. */
+export const getMaxHeightPercent = () => get(SETTINGS.MAX_HEIGHT);
+
+/** @returns {string}  "#rrggbb" or "#rrggbbaa". */
+export const getBackgroundColor = () => getColor(SETTINGS.BACKGROUND_COLOR);
+
+export const isBorderShown = () => get(SETTINGS.SHOW_BORDER);
+
+/** @returns {number}  The border width in pixels. */
+export const getBorderWidth = () => get(SETTINGS.BORDER_WIDTH);
+
+/** @returns {string}  "#rrggbb" or "#rrggbbaa". */
+export const getBorderColor = () => getColor(SETTINGS.BORDER_COLOR);
+
+/** @returns {number}  The time in milliseconds between the end of a hover and the hide of the display. */
+export const getHideDelayMs = () => get(SETTINGS.HIDE_DELAY);
+
+/** @returns {string}  The file name filter of a new folder source when the user types none. */
+export const getDefaultFilter = () => get(SETTINGS.DEFAULT_FILTER);
+
+export const mayOwnersManageGallery = () => get(SETTINGS.OWNERS_MANAGE_GALLERY);
+
+export const isTokenNameShown = () => get(SETTINGS.SHOW_NAME);
+
+/** @returns {boolean}  Does this user want to see hover art? */
+export const isHoverArtEnabled = () => get(SETTINGS.ENABLED);
+
+/** @returns {boolean}  Does this user use the dragged position and size instead of the world defaults? */
+export const isCustomLayoutUsed = () => get(SETTINGS.USE_CUSTOM_POSITION);
+
 /**
- * @param {string} key  A value of SETTINGS.
- * @returns {*}
+ * @returns {import("./decisions/screen-geometry.mjs").EdgePosition|null}  The dragged position, or null if none is
+ *                                                                          stored or the stored value is invalid.
  */
-export function getSetting(key) {
-  return game.settings.get(MODULE_ID, key);
+export function getCustomPosition() {
+  const position = get(SETTINGS.CUSTOM_POSITION);
+  return isEdgePosition(position) ? position : null;
 }
+
+/** @returns {{height: number}|null}  The dragged size, or null if none is stored or the stored value is invalid. */
+export function getCustomSize() {
+  const size = get(SETTINGS.CUSTOM_SIZE);
+  return (Number.isFinite(size?.height) && (size.height > 0)) ? size : null;
+}
+
+/**
+ * Save a dragged layout, and switch this user to the dragged layout. A move saves only the position; a resize
+ * saves the position and the size.
+ * @param {{position: import("./decisions/screen-geometry.mjs").EdgePosition, size?: {height: number}}} layout
+ */
+export async function saveCustomLayout({position, size}) {
+  await set(SETTINGS.CUSTOM_POSITION, position);
+  if ( size ) await set(SETTINGS.CUSTOM_SIZE, size);
+  await set(SETTINGS.USE_CUSTOM_POSITION, true);
+}
+
+/** @returns {{width: number, height: number}}  The grid size of the gallery picker, inside the size limits. */
+export const getPickerSize = () => clampPickerSize(get(SETTINGS.PICKER_SIZE));
+
+/** @param {{width: number, height: number}} size */
+export const setPickerSize = size => set(SETTINGS.PICKER_SIZE, clampPickerSize(size));
 
 /**
  * @param {string} key  A key of COLOR_DEFAULTS.
  * @returns {string}    The color setting ("#rrggbb" or "#rrggbbaa"), or its default if the stored text is invalid.
  */
-export function getColorSetting(key) {
-  const value = getSetting(key);
+function getColor(key) {
+  const value = get(key);
   return HEX_COLOR.test(value) ? value : COLOR_DEFAULTS[key];
 }
 

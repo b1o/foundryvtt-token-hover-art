@@ -1,9 +1,10 @@
-import { MODULE_ID, FLAGS, SETTINGS } from "./constants.mjs";
-import { getSetting } from "./settings.mjs";
-import { hasVideoExtension } from "./compat.mjs";
+import { MODULE_ID, FLAGS } from "../constants.mjs";
+import { mayOwnersManageGallery } from "../settings.mjs";
+import { mayManageGallery } from "../decisions/gallery-rules.mjs";
+import { hasVideoExtension } from "../compat.mjs";
 
 /*
- * All reads and writes of module data go through this file.
+ * All reads and writes of the gallery, selection, and secret data go through this file.
  *
  * Gallery:   the manual images plus the files of all folder sources. All tokens of the Actor share it.
  *            Manual images: flags.token-hover-art.images on the world (base) Actor.
@@ -26,23 +27,21 @@ export function getBaseActor(actor) {
   return actor.isToken ? (actor.token?.baseActor ?? null) : actor;
 }
 
-/* -------------------------------------------- */
-/*  Gallery                                     */
-/* -------------------------------------------- */
-
 /**
- * Can the current user manage the gallery of this Actor (open the gallery window, add and remove images and
- * folders, set defaults)? GMs always can. Owners can if the world setting "Allow owners to manage galleries"
- * is on. Compendium Actors have no gallery. Selecting the hover art of a token is a separate right: the Token HUD
- * already limits it to GMs and owners.
+ * Can a user manage the gallery of this Actor? See mayManageGallery for the rule.
  * @param {Actor|null} actor  A base or a synthetic Actor.
+ * @param {User} user
  * @returns {boolean}
  */
-export function canManageGallery(actor) {
+export function canManageGallery(actor, user) {
   const baseActor = getBaseActor(actor);
-  if ( !baseActor || baseActor.pack ) return false;
-  if ( game.user.isGM ) return true;
-  return baseActor.isOwner && getSetting(SETTINGS.OWNERS_MANAGE_GALLERY);
+  return mayManageGallery({
+    hasActor: !!baseActor,
+    isInCompendium: !!baseActor?.pack,
+    isGM: user.isGM,
+    isOwner: !!baseActor?.testUserPermission(user, "OWNER"),
+    ownersMayManage: mayOwnersManageGallery()
+  });
 }
 
 /**
@@ -102,12 +101,8 @@ export function setFolderSources(actor, folders) {
   return getBaseActor(actor).setFlag(MODULE_ID, FLAGS.FOLDERS, folders);
 }
 
-/* -------------------------------------------- */
-/*  Token selection                             */
-/* -------------------------------------------- */
-
 /**
- * @param {object} change  The change object of an updateToken hook.
+ * @param {object} change  The change object of an updateToken or updateActor hook.
  * @returns {boolean}      Did the update change a flag of this module?
  */
 export function hasModuleFlagChange(change) {
@@ -123,26 +118,20 @@ export function getSelectedArt(tokenDoc) {
 }
 
 /**
+ * Give a token the hover art of one gallery asset. This is the only way to change the selection, so every trigger
+ * point applies the same rule: the path must be in the gallery of the token's Actor at the moment of the change.
  * @param {TokenDocument} tokenDoc
- * @param {string} path
+ * @param {string|null} path  A gallery path, or null for "No hover art".
  * @returns {Promise<TokenDocument>}
+ * @throws {Error}  If the path is not in the gallery.
  */
-export function selectArt(tokenDoc, path) {
+export function applyAsset(tokenDoc, path) {
+  if ( path === null ) return tokenDoc.unsetFlag(MODULE_ID, FLAGS.SELECTED);
+  if ( !getGallery(tokenDoc.actor).includes(path) ) {
+    throw new Error(game.i18n.localize("TOKEN_HOVER_ART.Errors.NotInGallery"));
+  }
   return tokenDoc.setFlag(MODULE_ID, FLAGS.SELECTED, path);
 }
-
-/**
- * Remove the hover art from the token. The token then shows nothing on hover.
- * @param {TokenDocument} tokenDoc
- * @returns {Promise<TokenDocument>}
- */
-export function clearArt(tokenDoc) {
-  return tokenDoc.unsetFlag(MODULE_ID, FLAGS.SELECTED);
-}
-
-/* -------------------------------------------- */
-/*  Token secret state                          */
-/* -------------------------------------------- */
 
 /**
  * @param {TokenDocument} tokenDoc
@@ -170,10 +159,6 @@ export function setSecret(tokenDoc, secret) {
 export function canViewArt(tokenDoc) {
   return !isSecret(tokenDoc) || tokenDoc.isOwner;
 }
-
-/* -------------------------------------------- */
-/*  Prototype token defaults                    */
-/* -------------------------------------------- */
 
 /**
  * @param {Actor} actor
@@ -218,10 +203,6 @@ export function isDefaultSecret(actor) {
 export function setDefaultSecret(actor, secret) {
   return getBaseActor(actor).update({[`prototypeToken.flags.${MODULE_ID}.${FLAGS.SECRET}`]: secret});
 }
-
-/* -------------------------------------------- */
-/*  Media                                       */
-/* -------------------------------------------- */
 
 /**
  * @param {string} path

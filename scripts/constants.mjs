@@ -23,7 +23,8 @@ export const SETTINGS = Object.freeze({
   SHOW_NAME: "showName",
   ENABLED: "enabled",
   OWNERS_MANAGE_GALLERY: "ownersManageGallery",
-  PALETTE_SIZE: "paletteSize",
+  // The key keeps its old name, so the size that users saved for the HUD palette stays.
+  PICKER_SIZE: "paletteSize",
   USE_CUSTOM_POSITION: "useCustomPosition",
   CUSTOM_POSITION: "customPosition",
   CUSTOM_SIZE: "customSize"
@@ -38,5 +39,5 @@ export const POSITIONS = Object.freeze({
 
 export const TEMPLATES = Object.freeze({
   GALLERY_SHEET: `modules/${MODULE_ID}/templates/gallery-sheet.hbs`,
-  HUD_PALETTE: `modules/${MODULE_ID}/templates/hud-palette.hbs`
+  GALLERY_PICKER: `modules/${MODULE_ID}/templates/gallery-picker.hbs`
 });
