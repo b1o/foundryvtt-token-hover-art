@@ -4,9 +4,6 @@ import {
   getBaseActor, canManageGallery, getManualImages, setManualImages, getFolderSources, getDefaultArt, setDefaultArt,
   clearDefaultArt, isDefaultSecret, setDefaultSecret, isVideo
 } from "./data/gallery-data.mjs";
-import {
-  canScanFolders, addFolderSource, setFolderFilter, removeFolderSource, rescanFolderSources
-} from "./data/folder-sources.mjs";
 import { getDocumentSheetClass, getFilePickerClass } from "./compat.mjs";
 import { notify, reportActionError } from "./output.mjs";
 
@@ -40,15 +37,30 @@ export class HoverArtGallery extends getDocumentSheetClass() {
    * Open the gallery of an Actor. An open window for the same Actor comes to the front.
    * A user who can scan folders also scans them again, so new files in a folder show up.
    * @param {Actor} actor  A base or a synthetic Actor.
+   * @param {import("./data/folder-sources.mjs").FolderSources} folderSources  The one writer of the folder sources.
    * @returns {HoverArtGallery|null}
    */
-  static open(actor) {
+  static open(actor, folderSources) {
     if ( !canManageGallery(actor, game.user) ) return null;
     const baseActor = getBaseActor(actor);
-    const app = Object.values(baseActor.apps).find(a => a instanceof HoverArtGallery) ?? new HoverArtGallery(baseActor);
+    const app = Object.values(baseActor.apps).find(a => a instanceof HoverArtGallery)
+      ?? new HoverArtGallery(baseActor, {folderSources});
     app.render(true, {focus: true});
-    if ( canScanFolders() ) rescanFolderSources(baseActor).then(reportFailedFolders, reportActionError);
+    if ( folderSources.canScan() ) folderSources.rescan(baseActor).then(reportFailedFolders, reportActionError);
     return app;
+  }
+
+  /** @type {import("./data/folder-sources.mjs").FolderSources} */
+  #folderSources;
+
+  /**
+   * @param {Actor} actor
+   * @param {object} options
+   * @param {import("./data/folder-sources.mjs").FolderSources} options.folderSources
+   */
+  constructor(actor, {folderSources, ...options}) {
+    super(actor, options);
+    this.#folderSources = folderSources;
   }
 
   /**
@@ -75,7 +87,7 @@ export class HoverArtGallery extends getDocumentSheetClass() {
       editable: this.isEditable,
       canBrowse: game.user.can("FILES_BROWSE"),
       canUpload: game.user.can("FILES_UPLOAD"),
-      canScan: this.isEditable && canScanFolders(),
+      canScan: this.isEditable && this.#folderSources.canScan(),
       defaultFilter: getDefaultFilter(),
       defaultSecret: isDefaultSecret(actor),
       manualImages: manual.map((path, index) => ({
@@ -197,7 +209,7 @@ export class HoverArtGallery extends getDocumentSheetClass() {
       case "browse-folder": return this.#browseFolder();
       case "add-folder": return this.#addFolderFromFields();
       case "rescan-folders": return this.#rescanFolders();
-      case "remove-folder": return removeFolderSource(this.document, index);
+      case "remove-folder": return this.#folderSources.remove(this.document, index);
     }
   }
 
@@ -206,7 +218,8 @@ export class HoverArtGallery extends getDocumentSheetClass() {
    */
   #onChangeFolderFilter(event) {
     const input = event.currentTarget;
-    return setFolderFilter(this.document, Number(input.closest("[data-index]").dataset.index), input.value);
+    const index = Number(input.closest("[data-index]").dataset.index);
+    return this.#folderSources.setFilter(this.document, index, input.value);
   }
 
   /* -------------------------------------------- */
@@ -250,14 +263,12 @@ export class HoverArtGallery extends getDocumentSheetClass() {
 
   /**
    * Remove an image from the gallery. Tokens that selected the image keep it, because the file still exists.
-   * The prototype default is removed, so new tokens do not start with an image that is not in the gallery.
+   * If the image was the default of new tokens, setManualImages also removes the default.
    * @param {number} index
    */
-  async #removeImage(index) {
+  #removeImage(index) {
     const images = getManualImages(this.document);
-    const path = images[index];
-    if ( path === undefined ) return;
-    if ( path === getDefaultArt(this.document) ) await clearDefaultArt(this.document);
+    if ( images[index] === undefined ) return;
     return setManualImages(this.document, images.filter((_, i) => i !== index));
   }
 
@@ -318,16 +329,15 @@ export class HoverArtGallery extends getDocumentSheetClass() {
   }
 
   /**
-   * @param {object} data  See addFolderSource.
+   * @param {object} data  See FolderSources#add.
    */
   async #addFolder(data) {
-    await addFolderSource(this.document, data);
-    const added = getFolderSources(this.document).at(-1);
+    const added = await this.#folderSources.add(this.document, data);
     notify.info("TOKEN_HOVER_ART.Folders.Added", {count: added.files.length});
   }
 
   async #rescanFolders() {
-    const result = await rescanFolderSources(this.document);
+    const result = await this.#folderSources.rescan(this.document);
     if ( reportFailedFolders(result) ) return;
     notify.info(result.changed ? "TOKEN_HOVER_ART.Folders.RescanChanged" : "TOKEN_HOVER_ART.Folders.RescanUnchanged");
   }

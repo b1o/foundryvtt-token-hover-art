@@ -64,9 +64,22 @@ must open it for a token that is not selected or not on the viewed scene. So the
   token that the picker shows now closes the picker (toggle, as today).
 - **States** (rule 1.5): `closed` and `open`. `open` holds the context and the current category id. One method,
   `#transition`, changes the state.
-- **Close:** the close button, Escape, a click outside the picker, and the deletion of the token. The HUD closing
-  no longer closes the picker (the picker no longer lives in the HUD). Closing pauses and removes all video
-  elements (rule 6.2).
+- **Close:** the close button, Escape (also when the focus is not in the picker), a pointer press outside the
+  picker, the deletion of the token, and a scene change for a picker that the HUD opened. Closing pauses and
+  removes all video elements (rule 6.2).
+  - Every user action that moves the HUD to another token, or closes it, starts with a press on the canvas: a
+    left-click selects a token, a right-click opens its HUD, a click on empty canvas releases the tokens. That
+    press closes the picker too. So a picker from the HUD closes together with the HUD, and the HUD button never
+    re-targets an open picker. Only trigger points without a canvas press (hotbar, phase D) re-target it.
+- **Follow the trigger:** a picker from the HUD stays next to the HUD button when the canvas pans or zooms (mouse
+  wheel, keyboard pan) and when the window size changes, as the old HUD palette did.
+- **Keyboard focus** (v11 fact: `KeyboardManager#hasFocus` is true while any element has focus, and then no core
+  keybinding runs; `client/core/keyboard.js:124` and `:312`):
+  - A mouse click on the HUD button or on a picker button does not leave the focus on the button, so the core keys
+    (pan, Delete, pause) keep working.
+  - An open with the keyboard (Enter or Space on the HUD button) moves the focus to the selected tile.
+  - Escape is caught before core while the picker is open. Without that, core would release the token and close
+    the HUD, and the picker would stay open.
 - **Live update:** the picker renders again on `updateToken` (selection or secret of its token), `updateActor`
   (gallery change), and `updateUser` (category change of the user whose categories it shows).
 - **Missing token:** if `fromUuidSync(tokenUuid)` returns nothing, the picker does not open and the user gets a
@@ -291,14 +304,16 @@ scripts/
   output.mjs                   prefixed log and notifications
   compat.mjs                   version differences; the Token HUD column; findByUuid (D: hotbar slot, hotbar lock)
   sheet-header-buttons.mjs     the "Hover Art" button in actor sheet headers (opens the gallery manager)
+  keyboard-focus.mjs           give the focus back after a pointer click (v11 keybinding trap)
   gallery-sheet.mjs            the gallery manager
   color-fields.mjs
   data/
     gallery-data.mjs           gallery, selection (applyAsset is the only writer), secret, defaults
-    folder-sources.mjs         folder scans
+    folder-sources.mjs         class FolderSources: folder scans, writes one after the other
     category-store.mjs         C: User flag reads and serialized writes
   decisions/                   pure, no Foundry or DOM globals (ESLint enforces this)
     gallery-rules.mjs          who may manage a gallery; token name visibility on hover
+    folder-list.mjs            changes to the folder list, applied to the list as it is at the write
     picker-placement.mjs       picker size limits and placement (B: candidates and token avoidance)
     picker-view.mjs            template data of the picker
     screen-geometry.mjs        edges, fractions, clamp (shared by the hover display and the picker)
@@ -307,6 +322,7 @@ scripts/
   picker/
     gallery-picker.mjs         state, open, close, render, actions
     picker-resize.mjs          the resize grip
+    open-picker-listeners.mjs  page listeners while open: outside press, Escape, window resize
     picker-move.mjs            B: Ctrl move
     picker-drag-drop.mjs       C: drag sources and drop targets in the picker
   triggers/
@@ -329,9 +345,38 @@ None. Decision 5 (folder behavior) was confirmed on 2026-10-26.
 
 | Phase | Content | Manual test (port 30011) |
 |---|---|---|
-| A | Foundation (section 8), standalone picker with the HUD trigger | Open from the HUD at four screen edges; select, clear, secret; second client sees changes; keyboard only. |
+| A | Foundation (section 8), standalone picker with the HUD trigger | The user flows in 11.1. |
 | B | Placement and Ctrl move | Token near each edge: picker fully visible, token not covered; pin, reload, reset; window resize. |
 | C | Categories | Create nested, move assets and categories by drag and by menu, cycle refused, delete subtree, folder rescan removes a file, GM edits a player's tree. |
 | D | Hotbar | Drag each kind; locked hotbar; token deleted; token on another scene; player without `MACRO_SCRIPT`; setting off. |
 
 Pure modules (`decisions/`) get unit tests that run without Foundry (rule 2).
+
+### 11.1 Phase A user flows
+
+Run each flow with real input: right-click and left-click on tokens and on the canvas, the mouse wheel, and keys.
+Do not open the HUD from a script. A script bind skips the canvas press, and the canvas press is what closes the
+picker in real use.
+
+| # | User action | Expected result |
+|---|---|---|
+| A1 | Right-click a token, then click the hover art button in the HUD. | The picker opens next to the button, inside the screen. The button shows as active. |
+| A2 | Click an image tile, then "No hover art". | The token flag changes each time, and the active tile follows. The picker stays open. |
+| A3 | After A2, press W (or an arrow key). | The canvas pans: the click did not leave the focus on a button. |
+| A4 | GM: click the eye button twice. | The secret flag turns on, then off. |
+| A5 | Click the HUD button again. | The picker closes; the HUD stays; the button is not active. |
+| A6 | Open the picker, then press Escape. | Only the picker closes. The token stays selected and the HUD stays open. |
+| A7 | Open the picker, then turn the mouse wheel over the canvas. | The picker moves with the HUD button and stays inside the screen. |
+| A8 | Open the picker, then left-click another token. | The picker and the HUD close; the other token is selected. |
+| A9 | Open the picker, then right-click another token. | The picker closes; the HUD opens for the other token, with its button not active. |
+| A10 | Open the picker, then click empty canvas. | The picker and the HUD close. |
+| A11 | Open the picker, then click the chat or the sidebar. | The picker closes. |
+| A12 | Open the picker, then click the gear button. | The gallery manager opens; the picker stays open until the next click outside. |
+| A13 | Open the picker, then a second user changes the art or the gallery. | The open picker shows the change. |
+| A14 | Open the picker, then delete the token (other client or Delete key after a click on the canvas). | The picker closes. |
+| A15 | Open the picker, then switch the scene. | The picker closes. |
+| A16 | Open the picker, then resize the browser window. | The picker stays next to the button, inside the screen. |
+| A17 | Drag the resize grip. | The grid grows to the left and down; the right edge stays. After a reload the size stays. |
+| A18 | Keyboard: focus the HUD button, press Enter, then Tab, Enter, and Escape. | The picker opens with the focus on the selected tile; Enter selects; Escape closes. |
+| A19 | Hover tokens while the picker is open and closed. | The hover display shows and hides as before. |
+| A20 | Player who owns a token: A1, A2, A6. | Same results; no eye button. A non-owned token has no HUD. |

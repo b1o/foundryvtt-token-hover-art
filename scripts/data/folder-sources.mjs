@@ -1,5 +1,6 @@
 import { getDefaultFilter } from "../settings.mjs";
 import { getFolderSources, setFolderSources } from "./gallery-data.mjs";
+import { hasFolder, replaceFolder, removeFolder, applyScanResults } from "../decisions/folder-list.mjs";
 import { getFilePickerClass } from "../compat.mjs";
 import { log } from "../output.mjs";
 
@@ -10,6 +11,11 @@ import { log } from "../output.mjs";
  *
  * The server answers only users with the FILES_BROWSE permission. So a scan stores its result in the
  * Actor flag, and all other users read that stored result.
+ *
+ * Writes: each action scans first, then reads the current list and applies its change to it (folder-list.mjs).
+ * The writes of this client run one after the other, so a write always reads the result of the write before it.
+ * Writes of two different clients at the same moment can still overwrite each other: Foundry has no transaction for
+ * a flag, and the next scan repairs a lost file list.
  */
 
 /** Only image and video files can be hover art. The server applies this list together with the filter. */
@@ -18,10 +24,126 @@ const MEDIA_EXTENSIONS = Object.keys(CONST.IMAGE_FILE_EXTENSIONS)
   .map(ext => `.${ext}`);
 
 /**
- * @returns {boolean}  Can the current user scan folders?
+ * @typedef {import("../decisions/folder-list.mjs").FolderSource} FolderSource
  */
-export function canScanFolders() {
-  return game.user.can("FILES_BROWSE");
+
+/**
+ * @typedef {object} RescanResult
+ * @property {boolean} changed           Did a file list change?
+ * @property {string[]} failedFolders    The folders that could not be scanned. They keep their last result.
+ */
+
+export class FolderSources {
+
+  /** The last write of this client. The next write starts when it ends. */
+  #lastWrite = Promise.resolve();
+
+  /**
+   * @returns {boolean}  Can the current user scan folders?
+   */
+  canScan() {
+    return game.user.can("FILES_BROWSE");
+  }
+
+  /**
+   * Add a folder source to the Actor and scan it.
+   * @param {Actor} actor
+   * @param {object} data
+   * @param {string} data.folder           The folder path.
+   * @param {string} [data.filter]         The file name filter. Empty means the default filter.
+   * @param {string} [data.source]         The storage. If it is missing, it comes from the path (see sourceOfPath).
+   * @param {string|null} [data.bucket]    The S3 bucket. An empty value means no bucket.
+   * @returns {Promise<FolderSource>}      The added entry.
+   * @throws {Error}  If the gallery has this folder with this filter already.
+   */
+  async add(actor, {folder, filter, source, bucket}) {
+    const path = normalizeFolder(folder);
+    const entry = {
+      source: source ?? sourceOfPath(path),
+      bucket: bucket || null,
+      folder: path,
+      filter: normalizeFilter(filter),
+      files: []
+    };
+    // Check before the scan too, so a duplicate fails at once and does not scan the folder for nothing.
+    if ( hasFolder(getFolderSources(actor), entry) ) throw alreadyAddedError();
+    entry.files = await scanFolder(entry);
+    await this.#write(actor, current => {
+      if ( hasFolder(current, entry) ) throw alreadyAddedError();
+      return [...current, entry];
+    });
+    return entry;
+  }
+
+  /**
+   * Change the filter of a folder source and scan the folder again.
+   * @param {Actor} actor
+   * @param {number} index   The index of the entry in the list that the user sees now.
+   * @param {string} filter
+   * @returns {Promise<void>}
+   * @throws {Error}  If another entry has the same folder with the new filter.
+   */
+  async setFilter(actor, index, filter) {
+    const target = getFolderSources(actor)[index];
+    if ( !target ) return;
+    const changed = {...target, filter: normalizeFilter(filter)};
+    changed.files = await scanFolder(changed);
+    await this.#write(actor, current => {
+      if ( hasFolder(current, changed, target) ) throw alreadyAddedError();
+      return replaceFolder(current, target, changed);
+    });
+  }
+
+  /**
+   * Remove a folder source. Tokens that selected one of its files keep the selection.
+   * @param {Actor} actor
+   * @param {number} index  The index of the entry in the list that the user sees now.
+   * @returns {Promise<void>}
+   */
+  async remove(actor, index) {
+    const target = getFolderSources(actor)[index];
+    if ( target ) await this.#write(actor, current => removeFolder(current, target));
+  }
+
+  /**
+   * Scan all folder sources again. Write to the Actor only if a file list changed, because each write
+   * sends an update to all clients and renders the sheets and the pickers again.
+   * A folder that cannot be scanned keeps its last result. The caller tells the user about it.
+   * @param {Actor} actor
+   * @returns {Promise<RescanResult>}
+   */
+  async rescan(actor) {
+    const results = [];
+    const failedFolders = [];
+    for ( const entry of getFolderSources(actor) ) {
+      try {
+        results.push({key: entry, files: await scanFolder(entry)});
+      } catch(err) {
+        log.warn(`Cannot scan the folder "${entry.folder}".`, err);
+        failedFolders.push(entry.folder);
+      }
+    }
+    const changed = await this.#write(actor, current => applyScanResults(current, results));
+    return {changed, failedFolders};
+  }
+
+  /**
+   * Run a change after the last write of this client, on the list as it is at that moment.
+   * @param {Actor} actor
+   * @param {function(FolderSource[]): (FolderSource[]|null)} change  Returns the new list, or null for no write.
+   * @returns {Promise<boolean>}  Did the change write a new list?
+   */
+  #write(actor, change) {
+    const write = this.#lastWrite.then(async () => {
+      const folders = change(getFolderSources(actor));
+      if ( !folders ) return false;
+      await setFolderSources(actor, folders);
+      return true;
+    });
+    // A failed write must not stop the writes after it. The caller of this write gets its error.
+    this.#lastWrite = write.then(() => undefined, () => undefined);
+    return write;
+  }
 }
 
 /**
@@ -30,98 +152,11 @@ export function canScanFolders() {
  * @returns {string}
  * @throws {Error}     If the filter contains a "/". The filter matches file names, not paths.
  */
-export function normalizeFilter(filter) {
+function normalizeFilter(filter) {
   const value = (filter ?? "").trim() || getDefaultFilter();
   if ( value.includes("/") ) throw new Error(game.i18n.localize("TOKEN_HOVER_ART.Folders.FilterHasSlash"));
   return value;
 }
-
-/**
- * Add a folder source to the Actor and scan it.
- * @param {Actor} actor
- * @param {object} data
- * @param {string} data.folder           The folder path.
- * @param {string} [data.filter]         The file name filter. Empty means the default filter.
- * @param {string} [data.source]         The storage. If it is missing, it comes from the path (see sourceOfPath).
- * @param {string|null} [data.bucket]    The S3 bucket. An empty value means no bucket.
- * @returns {Promise<Actor>}
- */
-export async function addFolderSource(actor, {folder, filter, source, bucket}) {
-  const path = normalizeFolder(folder);
-  const entry = {
-    source: source ?? sourceOfPath(path),
-    bucket: bucket || null,
-    folder: path,
-    filter: normalizeFilter(filter),
-    files: []
-  };
-  const folders = getFolderSources(actor);
-  if ( folders.some(f => isSameFolder(f, entry)) ) {
-    throw new Error(game.i18n.localize("TOKEN_HOVER_ART.Folders.AlreadyAdded"));
-  }
-  entry.files = await scanFolder(entry);
-  return setFolderSources(actor, [...folders, entry]);
-}
-
-/**
- * Change the filter of a folder source and scan the folder again.
- * @param {Actor} actor
- * @param {number} index
- * @param {string} filter
- * @returns {Promise<Actor|undefined>}
- */
-export async function setFolderFilter(actor, index, filter) {
-  const folders = getFolderSources(actor).map(f => ({...f}));
-  const entry = folders[index];
-  if ( !entry ) return;
-  entry.filter = normalizeFilter(filter);
-  entry.files = await scanFolder(entry);
-  return setFolderSources(actor, folders);
-}
-
-/**
- * Remove a folder source. Tokens that selected one of its files keep the selection.
- * @param {Actor} actor
- * @param {number} index
- * @returns {Promise<Actor>}
- */
-export function removeFolderSource(actor, index) {
-  return setFolderSources(actor, getFolderSources(actor).filter((_, i) => i !== index));
-}
-
-/**
- * @typedef {object} RescanResult
- * @property {boolean} changed           Did a file list change?
- * @property {string[]} failedFolders    The folders that could not be scanned. They keep their last result.
- */
-
-/**
- * Scan all folder sources again. Write to the Actor only if a file list changed, because each write
- * sends an update to all clients and renders the sheets and the pickers again.
- * A folder that cannot be scanned keeps its last result. The caller tells the user about it.
- * @param {Actor} actor
- * @returns {Promise<RescanResult>}
- */
-export async function rescanFolderSources(actor) {
-  const folders = getFolderSources(actor);
-  const result = {changed: false, failedFolders: []};
-  const scanned = [];
-  for ( const entry of folders ) {
-    let files = entry.files;
-    try {
-      files = await scanFolder(entry);
-    } catch(err) {
-      log.warn(`Cannot scan the folder "${entry.folder}".`, err);
-      result.failedFolders.push(entry.folder);
-    }
-    if ( !sameFiles(files, entry.files) ) result.changed = true;
-    scanned.push({...entry, files});
-  }
-  if ( result.changed ) await setFolderSources(actor, scanned);
-  return result;
-}
-
-/* -------------------------------------------- */
 
 /**
  * List the files in the folder that match the filter.
@@ -133,17 +168,6 @@ async function scanFolder({source, bucket, folder, filter}) {
   if ( bucket ) options.bucket = bucket;
   const result = await getFilePickerClass().browse(source, `${folder}/${filter}`, options);
   return [...result.files].sort((a, b) => a.localeCompare(b));
-}
-
-/**
- * Compare two sorted file lists. foundry.utils.objectsEqual is not usable here: in v11 it compares arrays by
- * identity only.
- * @param {string[]} a
- * @param {string[]} b
- * @returns {boolean}
- */
-function sameFiles(a, b) {
-  return (a.length === b.length) && a.every((path, i) => path === b[i]);
 }
 
 /**
@@ -166,11 +190,7 @@ function sourceOfPath(folder) {
   return folder.startsWith("icons/") ? "public" : "data";
 }
 
-/**
- * @param {FolderSource} a
- * @param {FolderSource} b
- * @returns {boolean}  Do both entries scan the same folder with the same filter?
- */
-function isSameFolder(a, b) {
-  return (a.source === b.source) && (a.bucket === b.bucket) && (a.folder === b.folder) && (a.filter === b.filter);
+/** @returns {Error} */
+function alreadyAddedError() {
+  return new Error(game.i18n.localize("TOKEN_HOVER_ART.Folders.AlreadyAdded"));
 }

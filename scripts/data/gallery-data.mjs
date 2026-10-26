@@ -45,12 +45,7 @@ export function canManageGallery(actor, user) {
 }
 
 /**
- * @typedef {object} FolderSource
- * @property {string} source       The file storage: "data", "public", or "s3".
- * @property {string|null} bucket  The S3 bucket, if the source is "s3".
- * @property {string} folder       The folder path in the storage, without a trailing slash.
- * @property {string} filter       A glob pattern for the file names, for example "*.png" or "{*.png,*.webp}".
- * @property {string[]} files      The files that the last scan found.
+ * @typedef {import("../decisions/folder-list.mjs").FolderSource} FolderSource
  */
 
 /**
@@ -75,11 +70,12 @@ export function getManualImages(actor) {
  * Replace the manual images. Duplicate and empty paths are removed.
  * @param {Actor} actor
  * @param {string[]} paths
- * @returns {Promise<Actor>}
+ * @returns {Promise<void>}
  */
-export function setManualImages(actor, paths) {
+export async function setManualImages(actor, paths) {
   const unique = [...new Set(paths.filter(p => typeof p === "string" && p.trim()))];
-  return getBaseActor(actor).setFlag(MODULE_ID, FLAGS.IMAGES, unique);
+  await getBaseActor(actor).setFlag(MODULE_ID, FLAGS.IMAGES, unique);
+  await reconcileDefaultArt(actor);
 }
 
 /**
@@ -95,10 +91,23 @@ export function getFolderSources(actor) {
  * Replace the folder sources.
  * @param {Actor} actor
  * @param {FolderSource[]} folders
- * @returns {Promise<Actor>}
+ * @returns {Promise<void>}
  */
-export function setFolderSources(actor, folders) {
-  return getBaseActor(actor).setFlag(MODULE_ID, FLAGS.FOLDERS, folders);
+export async function setFolderSources(actor, folders) {
+  await getBaseActor(actor).setFlag(MODULE_ID, FLAGS.FOLDERS, folders);
+  await reconcileDefaultArt(actor);
+}
+
+/**
+ * The default art of new tokens must be in the gallery. The two gallery writers above call this after each write, so
+ * every way to remove an image applies the rule: a manual removal, a folder removal, and a scan that no longer finds
+ * a file. Tokens that selected the image keep it, because the file can still exist.
+ * @param {Actor} actor
+ * @returns {Promise<void>}
+ */
+async function reconcileDefaultArt(actor) {
+  const defaultArt = getDefaultArt(actor);
+  if ( defaultArt && !getGallery(actor).includes(defaultArt) ) await clearDefaultArt(actor);
 }
 
 /**

@@ -35,9 +35,29 @@ export function clampPickerSize(size) {
  * @returns {{left: number, top: number}}
  */
 export function placePicker(anchor, size, viewport) {
-  const left = anchor.left - ANCHOR_GAP - size.width;
+  return clampToViewport({left: anchor.left - ANCHOR_GAP - size.width, top: anchor.top}, size, viewport);
+}
+
+/**
+ * Keep the picker where it is, but inside the viewport. For a picker whose trigger is gone.
+ * @param {import("./screen-geometry.mjs").Rect} rect  The screen rectangle of the picker now.
+ * @param {import("./screen-geometry.mjs").Size} viewport
+ * @returns {{left: number, top: number}}
+ */
+export function keepInViewport(rect, viewport) {
+  return clampToViewport(rect, rect, viewport);
+}
+
+/**
+ * @param {{left: number, top: number}} position
+ * @param {import("./screen-geometry.mjs").Size} size
+ * @param {import("./screen-geometry.mjs").Size} viewport
+ * @returns {{left: number, top: number}}  The position, rounded, with the whole size inside the viewport. A size
+ *                                         larger than the viewport starts at the top-left corner.
+ */
+function clampToViewport({left, top}, size, viewport) {
   return {
     left: Math.round(clamp(left, 0, Math.max(viewport.width - size.width, 0))),
-    top: Math.round(clamp(anchor.top, 0, Math.max(viewport.height - size.height, 0)))
+    top: Math.round(clamp(top, 0, Math.max(viewport.height - size.height, 0)))
   };
 }

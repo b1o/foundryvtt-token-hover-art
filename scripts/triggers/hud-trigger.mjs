@@ -1,5 +1,6 @@
 import { getTokenHudColumn } from "../compat.mjs";
 import { log } from "../output.mjs";
+import { isPointerClick } from "../keyboard-focus.mjs";
 
 /*
  * The Token HUD trigger point: a button in the left column of the HUD that opens the gallery picker for the HUD
@@ -43,6 +44,7 @@ export class HudTrigger {
     const column = getTokenHudColumn(html);
     if ( !column ) return this.#reportMissingColumn();
 
+    const tokenUuid = tokenDoc.uuid;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "control-icon tha-control";
@@ -50,16 +52,11 @@ export class HudTrigger {
     button.dataset.tooltip = "TOKEN_HOVER_ART.Picker.Open";
     button.setAttribute("aria-label", game.i18n.localize("TOKEN_HOVER_ART.Picker.Open"));
     button.innerHTML = '<i class="fas fa-images" aria-hidden="true"></i>';
-    button.addEventListener("click", () => this.#picker.toggle({
-      tokenUuid: tokenDoc.uuid,
-      categoryId: null,
-      anchorRect: button.getBoundingClientRect(),
-      source: "hud"
-    }));
+    button.addEventListener("click", event => this.#onClick(event, tokenUuid));
     column.append(button);
 
     this.#button = button;
-    this.#tokenUuid = tokenDoc.uuid;
+    this.#tokenUuid = tokenUuid;
     this.syncButton();
   }
 
@@ -71,6 +68,34 @@ export class HudTrigger {
     const isOpen = this.#picker.isOpenFor(this.#tokenUuid);
     this.#button.classList.toggle("active", isOpen);
     this.#button.setAttribute("aria-pressed", String(isOpen));
+  }
+
+  /**
+   * Toggle the picker. After a mouse click, no element keeps the focus, so the core keys keep working. After a click
+   * from the keyboard, the focus goes into the picker.
+   * @param {MouseEvent} event
+   * @param {string} tokenUuid
+   */
+  #onClick(event, tokenUuid) {
+    this.#picker.toggle({
+      tokenUuid,
+      categoryId: null,
+      getAnchorRect: () => this.#getButtonRect(tokenUuid),
+      source: "hud"
+    });
+    if ( isPointerClick(event) ) event.currentTarget.blur();
+    else this.#picker.focusSelection();
+  }
+
+  /**
+   * The picker asks for the anchor again after each canvas pan, so it follows the HUD.
+   * @param {string} tokenUuid
+   * @returns {DOMRect|null}  The screen rectangle of the button for this token, or null if the HUD shows another
+   *                          token or no token.
+   */
+  #getButtonRect(tokenUuid) {
+    if ( (this.#tokenUuid !== tokenUuid) || !this.#button?.isConnected ) return null;
+    return this.#button.getBoundingClientRect();
   }
 
   /**

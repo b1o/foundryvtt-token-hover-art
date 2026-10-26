@@ -8,10 +8,12 @@ import { GalleryPicker } from "./picker/gallery-picker.mjs";
 import { HudTrigger } from "./triggers/hud-trigger.mjs";
 import { DisplayLayout } from "./hover/display-layout.mjs";
 import { HoverDisplay } from "./hover/hover-display.mjs";
+import { FolderSources } from "./data/folder-sources.mjs";
 import { findByUuid, preloadTemplates } from "./compat.mjs";
 
 const timers = {setTimeout: (fn, ms) => window.setTimeout(fn, ms), clearTimeout: id => window.clearTimeout(id)};
-const openManager = actor => HoverArtGallery.open(actor);
+const folderSources = new FolderSources();
+const openManager = actor => HoverArtGallery.open(actor, folderSources);
 
 const hoverDisplay = new HoverDisplay({layout: new DisplayLayout(), timers});
 
@@ -49,4 +51,8 @@ Hooks.on("deleteToken", tokenDoc => {
 
 Hooks.on("hoverToken", (token, hovered) => hoverDisplay.onHoverToken(token, hovered));
 Hooks.on("canvasReady", () => hoverDisplay.preloadScene());
-Hooks.on("canvasTearDown", () => hoverDisplay.hide());
+Hooks.on("canvasPan", () => picker.onCanvasPan());
+Hooks.on("canvasTearDown", () => {
+  picker.onCanvasTearDown();
+  hoverDisplay.hide();
+});

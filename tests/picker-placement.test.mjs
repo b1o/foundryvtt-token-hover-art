@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { placePicker, clampPickerSize, DEFAULT_PICKER_SIZE, PICKER_SIZE_LIMITS } from "../scripts/decisions/picker-placement.mjs";
+import {
+  placePicker, keepInViewport, clampPickerSize, DEFAULT_PICKER_SIZE, PICKER_SIZE_LIMITS
+} from "../scripts/decisions/picker-placement.mjs";
 
 const viewport = {width: 1000, height: 800};
 const rect = (left, top, width, height) => ({left, top, width, height, right: left + width, bottom: top + height});
@@ -19,6 +21,14 @@ test("a trigger near the bottom edge moves the picker up into the viewport", () 
 
 test("a picker larger than the viewport starts at the top-left corner", () => {
   assert.deepEqual(placePicker(rect(600, 200, 40, 40), {width: 1200, height: 900}, viewport), {left: 0, top: 0});
+});
+
+test("a picker without a trigger keeps its position when it is inside the viewport", () => {
+  assert.deepEqual(keepInViewport(rect(100.4, 50, 300, 200), viewport), {left: 100, top: 50});
+});
+
+test("a picker without a trigger moves back inside a smaller viewport", () => {
+  assert.deepEqual(keepInViewport(rect(900, 700, 300, 200), viewport), {left: 700, top: 600});
 });
 
 test("a stored size is rounded and kept inside the limits", () => {

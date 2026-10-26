@@ -5,10 +5,12 @@ import {
   isVideo
 } from "../data/gallery-data.mjs";
 import { buildPickerView } from "../decisions/picker-view.mjs";
-import { placePicker } from "../decisions/picker-placement.mjs";
+import { placePicker, keepInViewport } from "../decisions/picker-placement.mjs";
 import { getCompiledTemplate } from "../compat.mjs";
 import { log, notify, reportActionError } from "../output.mjs";
+import { releaseFocusAfterPointerClick } from "../keyboard-focus.mjs";
 import { runPickerResize, applyPickerSize } from "./picker-resize.mjs";
+import { OpenPickerListeners } from "./open-picker-listeners.mjs";
 
 /*
  * The gallery picker: the popover where a user selects the hover art of one token. A trigger point opens it with a
@@ -21,10 +23,11 @@ import { runPickerResize, applyPickerSize } from "./picker-resize.mjs";
 
 /**
  * @typedef {object} PickerContext
- * @property {string} tokenUuid           The token whose hover art the picker changes.
- * @property {string|null} categoryId     The category to open, or null for the root.
- * @property {DOMRect} anchorRect         The screen rectangle of the trigger, for the placement.
- * @property {"hud"} source               Which trigger point opened the picker.
+ * @property {string} tokenUuid                     The token whose hover art the picker changes.
+ * @property {string|null} categoryId               The category to open, or null for the root.
+ * @property {function(): (DOMRect|null)} getAnchorRect  The screen rectangle of the trigger now, or null if the
+ *                                                  trigger is gone. The picker asks again when the view changes.
+ * @property {"hud"} source                         Which trigger point opened the picker.
  */
 
 const STATES = Object.freeze({CLOSED: "closed", OPEN: "open"});
@@ -40,8 +43,14 @@ export class GalleryPicker {
   /** @type {HTMLElement|null} */
   #element = null;
 
+  /** @type {OpenPickerListeners|null} */
+  #listeners = null;
+
   /** @type {Function|null} */
   #template = null;
+
+  /** Is a placement already scheduled for the end of the current task? */
+  #isPlacementScheduled = false;
 
   /** @type {function(string): (TokenDocument|null)} */
   #resolveToken;
@@ -51,12 +60,6 @@ export class GalleryPicker {
 
   /** @type {function(): void} */
   #onStateChange;
-
-  /** Close the picker on a pointer press outside of it and outside of every trigger. */
-  #onOutsidePointerDown = event => {
-    if ( this.#element.contains(event.target) || event.target.closest?.("[data-tha-trigger]") ) return;
-    this.close();
-  };
 
   /**
    * @param {object} options
@@ -102,6 +105,7 @@ export class GalleryPicker {
 
   /**
    * Open the picker for a context, or re-target the open picker. The user must own the token.
+   * The picker does not take the focus: a trigger that the keyboard used calls focusSelection().
    * @param {PickerContext} context
    */
   open(context) {
@@ -112,12 +116,20 @@ export class GalleryPicker {
     this.#transition(STATES.OPEN, context);
     this.#render();
     this.#place();
-    this.#focusSelection();
   }
 
   close() {
     if ( this.#state === STATES.CLOSED ) return;
     this.#transition(STATES.CLOSED, null);
+  }
+
+  /**
+   * Move the keyboard focus to the selected tile, so Tab and Enter start there.
+   */
+  focusSelection() {
+    if ( this.#state !== STATES.OPEN ) return;
+    const tile = this.#element.querySelector(".tha-choice.active") ?? this.#element.querySelector(".tha-choice");
+    tile?.focus({preventScroll: true});
   }
 
   /**
@@ -152,6 +164,27 @@ export class GalleryPicker {
   }
 
   /**
+   * Handle the canvasPan hook: keep the picker next to its trigger. Core calls the hook before it moves the HUD to
+   * the new view (client/pixi/board.js:1234 and :1240), so the placement waits until the pan code has returned.
+   */
+  onCanvasPan() {
+    if ( (this.#state !== STATES.OPEN) || this.#isPlacementScheduled ) return;
+    this.#isPlacementScheduled = true;
+    queueMicrotask(() => {
+      this.#isPlacementScheduled = false;
+      if ( this.#state === STATES.OPEN ) this.#place();
+    });
+  }
+
+  /**
+   * Handle the canvasTearDown hook. A picker from the Token HUD belongs to the viewed scene: its trigger and its
+   * token leave with the scene. This is the only rule that depends on the source of the context.
+   */
+  onCanvasTearDown() {
+    if ( (this.#state === STATES.OPEN) && (this.#context.source === "hud") ) this.close();
+  }
+
+  /**
    * The only place that changes the state. A close removes the content, so its videos stop and unload.
    * @param {STATES[keyof STATES]} state
    * @param {PickerContext|null} context
@@ -162,9 +195,9 @@ export class GalleryPicker {
     this.#context = context;
     const isOpen = state === STATES.OPEN;
     element.hidden = !isOpen;
-    if ( isOpen ) document.addEventListener("pointerdown", this.#onOutsidePointerDown, {capture: true});
+    if ( isOpen ) this.#listeners.start();
     else {
-      document.removeEventListener("pointerdown", this.#onOutsidePointerDown, {capture: true});
+      this.#listeners.stop();
       element.replaceChildren();
     }
     this.#onStateChange();
@@ -190,7 +223,9 @@ export class GalleryPicker {
 
     const element = this.#element;
     const scrollTop = element.querySelector(".tha-picker-grid")?.scrollTop ?? 0;
-    const focusKey = document.activeElement?.closest?.("[data-tha-focus-key]")?.dataset.thaFocusKey;
+    const focusKey = element.contains(document.activeElement)
+      ? document.activeElement.closest("[data-tha-focus-key]")?.dataset.thaFocusKey
+      : undefined;
     element.innerHTML = this.#template(view);
     element.setAttribute("aria-label", game.i18n.format("TOKEN_HOVER_ART.Picker.Title", {name: tokenDoc.name}));
     applyPickerSize(element, getPickerSize());
@@ -199,23 +234,19 @@ export class GalleryPicker {
   }
 
   /**
-   * Put the picker next to its trigger.
+   * Put the picker next to its trigger. If the trigger is gone (for example, the HUD shows another token now), the
+   * picker stays where it is, inside the viewport.
    */
   #place() {
     const element = this.#element;
     const rect = element.getBoundingClientRect();
+    const anchor = this.#context.getAnchorRect();
     const viewport = {width: window.innerWidth, height: window.innerHeight};
-    const {left, top} = placePicker(this.#context.anchorRect, {width: rect.width, height: rect.height}, viewport);
+    const {left, top} = anchor
+      ? placePicker(anchor, {width: rect.width, height: rect.height}, viewport)
+      : keepInViewport(rect, viewport);
     element.style.left = `${left}px`;
     element.style.top = `${top}px`;
-  }
-
-  /**
-   * Move the keyboard focus to the selected tile, so the arrow and Tab keys start there and Escape closes the picker.
-   */
-  #focusSelection() {
-    const active = this.#element.querySelector(".tha-choice.active") ?? this.#element.querySelector(".tha-choice");
-    active?.focus({preventScroll: true});
   }
 
   /**
@@ -237,17 +268,17 @@ export class GalleryPicker {
     element.setAttribute("role", "dialog");
     element.hidden = true;
     element.addEventListener("click", event => this.#onClick(event));
-    element.addEventListener("keydown", event => {
-      if ( event.key !== "Escape" ) return;
-      event.stopPropagation();
-      this.close();
-    });
     element.addEventListener("pointerdown", event => {
       if ( !event.target.closest(".tha-picker-resize") ) return;
       runPickerResize(event, element, {startSize: getPickerSize(), onEnd: size => setPickerSize(size)});
     });
     document.body.append(element);
     this.#element = element;
+    this.#listeners = new OpenPickerListeners({
+      picker: element,
+      onClose: () => this.close(),
+      onViewportChange: () => this.#place()
+    });
     return element;
   }
 
@@ -257,6 +288,7 @@ export class GalleryPicker {
   async #onClick(event) {
     const button = event.target.closest("[data-tha-action]");
     if ( !button ) return;
+    releaseFocusAfterPointerClick(event, button);
     const tokenDoc = this.#resolveToken(this.#context.tokenUuid);
     if ( !tokenDoc ) return this.close();
     try {
