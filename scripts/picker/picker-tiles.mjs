@@ -4,8 +4,8 @@ import { PickerMarks } from "./picker-marks.mjs";
 import { PickerDragDrop } from "./picker-drag-drop.mjs";
 
 /*
- * The tile actions of the gallery picker that move tiles: the marks (multi-select) and the drag and drop. A drag of a
- * marked tile moves all marked tiles. The writes go through PickerCategories.
+ * The tile actions of the gallery picker that move tiles: the marks (multi-select), the drag and drop, and the tile
+ * menus. A move of a marked tile moves all marked tiles. The writes go through PickerCategories.
  */
 
 /**
@@ -68,6 +68,15 @@ export class PickerTiles {
    */
   isMarkClick(event, button) {
     return this.#marks.onTileClick(event, getTileKey(button));
+  }
+
+  /**
+   * @param {HTMLElement} menuButton  The menu button of a tile.
+   * @returns {import("./picker-menu.mjs").MenuSpec|null}
+   */
+  buildTileMenu(menuButton) {
+    return this.#withScope(({scope, paths, categoryId}) => this.#categories.buildTileMenu(scope, paths, categoryId,
+      this.#marks.getMovedKeys(getTileKey(menuButton)))) || null;
   }
 
   /**

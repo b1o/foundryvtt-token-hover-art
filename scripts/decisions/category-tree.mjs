@@ -131,6 +131,25 @@ export function getDescendantIds(map, id) {
 }
 
 /**
+ * The categories as a list for a choice ("Move to…"), in display order, each after its parent.
+ * @param {CategoryTree} tree
+ * @param {string[]} excludedIds  Categories to leave out, together with everything below them.
+ * @returns {{id: string, name: string, depth: number}[]}  The depth of a top category is 0.
+ */
+export function listCategories(tree, excludedIds) {
+  const result = [];
+  const visit = (ids, depth) => {
+    for ( const id of ids ) {
+      if ( excludedIds.includes(id) ) continue;
+      result.push({id, name: tree.nodes[id].name, depth});
+      visit(tree.nodes[id].childIds, depth + 1);
+    }
+  };
+  visit(tree.rootIds, 0);
+  return result;
+}
+
+/**
  * @param {CategoryTree} tree
  * @param {string} id
  * @returns {{categories: number, assets: number}}  What a delete of the category gives back to the root: the

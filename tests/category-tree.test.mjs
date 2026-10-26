@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   readCategoryMap, buildTree, getAncestors, getDescendantIds, canMoveCategory, planCreateCategory, planRenameCategory,
-  planMoveAsset, planMoveCategory, planDeleteCategory, countContent, getHolderIds, planMoveItems
+  planMoveAsset, planMoveCategory, planDeleteCategory, countContent, getHolderIds, listCategories, planMoveItems
 } from "../scripts/decisions/category-tree.mjs";
 
 const category = (name, parentId = null, paths = [], sort = 0) => ({name, parentId, sort, paths});
@@ -137,6 +137,17 @@ test("a new category needs a name and an existing parent", () => {
   assert.equal(planCreateCategory(map, {id: "new", name: "  ", parentId: null}), null);
   assert.equal(planCreateCategory(map, {id: "new", name: "X", parentId: "gone"}), null);
   assert.equal(planCreateCategory(map, {id: "calm", name: "X", parentId: null}), null);
+});
+
+test("the choice list follows the tree and leaves out an excluded category with its descendants", () => {
+  const tree = buildTree(map, gallery);
+  assert.deepEqual(listCategories(tree, []), [
+    {id: "calm", name: "Calm", depth: 0},
+    {id: "moods", name: "Moods", depth: 0},
+    {id: "angry", name: "Angry", depth: 1},
+    {id: "furious", name: "Furious", depth: 2}
+  ]);
+  assert.deepEqual(listCategories(tree, ["angry"]).map(entry => entry.id), ["calm", "moods"]);
 });
 
 test("the content count includes every depth", () => {

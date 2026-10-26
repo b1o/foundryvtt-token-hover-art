@@ -8,5 +8,6 @@
        autocomplete="off" spellcheck="false">
 {{/if}}
 {{#each items}}
-<button type="button" class="tha-menu-item" data-index="{{@index}}" role="menuitem">{{label}}</button>
+<button type="button" class="tha-menu-item" data-index="{{@index}}" role="menuitem" style="--tha-menu-depth: {{depth}}"
+        {{#if isDisabled}}disabled{{/if}}>{{label}}</button>
 {{/each}}

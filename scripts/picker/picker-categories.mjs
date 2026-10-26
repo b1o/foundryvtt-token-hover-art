@@ -1,9 +1,10 @@
 import { buildTree, getAncestors, isLocation, planMoveItems } from "../decisions/category-tree.mjs";
 import { reportActionError } from "../output.mjs";
-import { buildCategoryMenu, buildCreateField } from "./picker-menus.mjs";
+import { buildAssetMenu, buildCategoryMenu, buildCreateField, buildMarkedMenu } from "./picker-menus.mjs";
+import { toMovedItems } from "../decisions/tile-marks.mjs";
 
 /*
- * The category actions of the gallery picker: read the categories of the current user, build the category menus, and
+ * The category actions of the gallery picker: read the categories of the current user, build the tile menus, and
  * start the writes of the menus and of the drops. All writes go through the CategoryStore. The picker renders again
  * when the User update arrives (updateUser), for this client and for every other client.
  */
@@ -49,15 +50,21 @@ export class PickerCategories {
   }
 
   /**
-   * The menu of a category tile: rename and delete.
+   * The menu of a tile. For a marked tile among other marked tiles, the menu moves all of them.
    * @param {CategoryScope} scope
-   * @param {string[]} paths  The gallery: a delete confirmation counts the images in the category.
-   * @param {string} id
-   * @returns {MenuSpec|null}  Null if the category no longer exists.
+   * @param {string[]} paths           The gallery.
+   * @param {string|null} locationId   The shown category: it holds the tile.
+   * @param {string[]} movedKeys       The keys of the tiles that a move from this menu moves (tile-marks.mjs).
+   * @returns {MenuSpec|null}  Null if the category of the tile no longer exists.
    */
-  buildCategoryMenu(scope, paths, id) {
+  buildTileMenu(scope, paths, locationId, movedKeys) {
     const tree = buildTree(this.#store.read(scope), paths);
-    return tree.nodes[id] ? buildCategoryMenu(id, tree, this.#getCommands(scope)) : null;
+    const commands = this.#getCommands(scope);
+    const items = toMovedItems(movedKeys);
+    if ( movedKeys.length > 1 ) return buildMarkedMenu({items, tree, locationId}, commands);
+    const [categoryId] = items.categoryIds;
+    if ( categoryId === undefined ) return buildAssetMenu({path: items.paths[0], tree, locationId}, commands);
+    return tree.nodes[categoryId] ? buildCategoryMenu({id: categoryId, tree, parentId: locationId}, commands) : null;
   }
 
   /**
@@ -85,7 +92,7 @@ export class PickerCategories {
    * @param {string|null} targetId
    */
   drop(scope, items, targetId) {
-    this.#run(this.#store.moveItems(scope, items, targetId));
+    this.#getCommands(scope).moveItems(items, targetId);
   }
 
   /**
@@ -95,6 +102,7 @@ export class PickerCategories {
   #getCommands(scope) {
     const store = this.#store;
     return {
+      moveItems: (items, targetId) => this.#run(store.moveItems(scope, items, targetId)),
       renameCategory: (id, name) => this.#run(store.rename(scope, id, name)),
       deleteCategory: id => this.#run(store.delete(scope, id))
     };

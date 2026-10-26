@@ -1,13 +1,15 @@
 import { getPickerOffsets, setPickerOffset } from "../settings.mjs";
-import { placePicker, centerPicker, keepInViewport } from "../decisions/picker-placement.mjs";
-import { SCREEN_ORIGIN, getTokenOrigin, toOffset, fromOffset } from "../decisions/picker-offsets.mjs";
+import { getBesideTrigger, getViewportCenter, keepInViewport } from "../decisions/picker-placement.mjs";
+import { getTokenCenter, toOffset, fromOffset } from "../decisions/picker-offsets.mjs";
 
 /*
- * Where the gallery picker is. The context of the trigger names the reference ("token" for the Token HUD, "screen"
- * for every other trigger). If the user dragged the picker for that reference, it goes to the same translation from
- * the reference point (picker-offsets.mjs). Else it goes to its default place (picker-placement.mjs): next to the
- * trigger with its center on the token center (Token HUD), or the viewport center (hotbar). In every case it stays
- * inside the viewport.
+ * Where the gallery picker is. The trigger gives the default place (picker-placement.mjs): left of the Token HUD
+ * button with the picker center on the token center, or the viewport center for the hotbar. If the user dragged the
+ * picker, a saved offset shifts the default place (picker-offsets.mjs). There is one offset for each reference of the
+ * context ("token" for the Token HUD, "screen" for the hotbar). In every case the picker stays inside the viewport.
+ *
+ * The placement runs at the open and again after each pan, zoom, token move, HUD render, window resize, and
+ * navigation, so a moved picker follows the trigger exactly as a picker at its default place does.
  */
 
 /**
@@ -17,21 +19,18 @@ import { SCREEN_ORIGIN, getTokenOrigin, toOffset, fromOffset } from "../decision
 export class PickerPosition {
 
   /**
-   * Put the picker where it belongs now. Call it after each render that can change the size, and after each pan,
-   * token move, and window resize.
+   * Put the picker where it belongs now. If the trigger is gone, the picker only stays inside the viewport.
    * @param {HTMLElement} picker
    * @param {PickerContext} context
    */
   apply(picker, context) {
     const rect = picker.getBoundingClientRect();
-    const size = {width: rect.width, height: rect.height};
     const viewport = {width: window.innerWidth, height: window.innerHeight};
-    const origin = getOrigin(context);
+    const base = getDefaultPlace(context, rect, viewport);
     const offset = getPickerOffsets()[context.positionReference];
-    let target;
-    if ( offset ) target = origin ? fromOffset(offset, origin) : rect;
-    else target = this.#getDefaultTarget(context, rect, size, viewport);
-    const {left, top} = keepInViewport({...target, ...size}, viewport);
+    let target = rect;
+    if ( base ) target = offset ? fromOffset(offset, base) : base;
+    const {left, top} = keepInViewport({...target, width: rect.width, height: rect.height}, viewport);
     picker.style.left = `${left}px`;
     picker.style.top = `${top}px`;
   }
@@ -45,15 +44,15 @@ export class PickerPosition {
   }
 
   /**
-   * Save the place where the user dragged the picker, for the reference of the context.
+   * Save the place where the user dragged the picker, as an offset from its default place now.
    * @param {DOMRect} rect  The screen rectangle of the picker.
    * @param {PickerContext} context
-   * @returns {Promise<boolean>}  Was the position saved? A token reference needs the token on the screen.
+   * @returns {Promise<boolean>}  Was the position saved? It needs the trigger on the screen.
    */
   async save(rect, context) {
-    const origin = getOrigin(context);
-    if ( !origin ) return false;
-    await setPickerOffset(context.positionReference, toOffset(rect, origin));
+    const base = getDefaultPlace(context, rect, {width: window.innerWidth, height: window.innerHeight});
+    if ( !base ) return false;
+    await setPickerOffset(context.positionReference, toOffset(rect, base));
     return true;
   }
 
@@ -64,31 +63,21 @@ export class PickerPosition {
   reset(context) {
     return setPickerOffset(context.positionReference, null);
   }
-
-  /**
-   * @param {PickerContext} context
-   * @param {DOMRect} rect
-   * @param {{width: number, height: number}} size
-   * @param {{width: number, height: number}} viewport
-   * @returns {{left: number, top: number}}  The viewport center, or left of the trigger and centered on the token or
-   *                                         on the trigger. If the trigger is gone, the picker stays where it is.
-   */
-  #getDefaultTarget(context, rect, size, viewport) {
-    if ( context.placement === "center" ) return centerPicker(size, viewport);
-    const anchor = context.getAnchorRect();
-    if ( !anchor ) return rect;
-    const token = (context.positionReference === "token") ? context.getTokenRect() : null;
-    const centerY = token ? getTokenOrigin(token).y : (anchor.top + (anchor.height / 2));
-    return placePicker(anchor, centerY, size, viewport);
-  }
 }
 
 /**
  * @param {PickerContext} context
- * @returns {{x: number, y: number}|null}  The reference point now, or null if the token is not on the screen.
+ * @param {{width: number, height: number}} size  The picker size.
+ * @param {{width: number, height: number}} viewport
+ * @returns {{left: number, top: number}|null}  The default place now, not clamped: the viewport center, or left of the
+ *                                             trigger and centered on the token or on the trigger. Null if the
+ *                                             trigger is gone.
  */
-function getOrigin(context) {
-  if ( context.positionReference === "screen" ) return SCREEN_ORIGIN;
-  const token = context.getTokenRect();
-  return token ? getTokenOrigin(token) : null;
+function getDefaultPlace(context, size, viewport) {
+  if ( context.placement === "center" ) return getViewportCenter(size, viewport);
+  const anchor = context.getAnchorRect();
+  if ( !anchor ) return null;
+  const token = (context.positionReference === "token") ? context.getTokenRect() : null;
+  const centerY = token ? getTokenCenter(token).y : (anchor.top + (anchor.height / 2));
+  return getBesideTrigger(anchor, centerY, size);
 }

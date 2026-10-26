@@ -76,7 +76,8 @@ must open it for a token that is not selected or not on the viewed scene. So the
     press closes the picker too. So a picker from the HUD closes together with the HUD, and the HUD button never
     re-targets an open picker. Only trigger points without a canvas press (hotbar, phase D) re-target it.
 - **Follow the trigger:** a picker from the HUD stays next to the HUD button when the canvas pans or zooms (mouse
-  wheel, keyboard pan) and when the window size changes, as the old HUD palette did.
+  wheel, keyboard pan) and when the window size changes, as the old HUD palette did. A dragged picker keeps its
+  offset from that place (5.2).
 - **Keyboard focus** (v11 fact: `KeyboardManager#hasFocus` is true while any element has focus, and then no core
   keybinding runs; `client/core/keyboard.js:124` and `:312`):
   - A mouse click on the HUD button or on a picker button does not leave the focus on the button, so the core keys
@@ -91,10 +92,10 @@ must open it for a token that is not selected or not on the viewed scene. So the
 - **Permission:** the picker opens only if the current user owns the token (`tokenDoc.isOwner`). The server also
   checks each update.
 - **Accessibility:** assets, categories, and header actions are `<button type="button">` with localized names.
-  A category tile has a menu button with "Rename" and "Delete". Decision (user, 2026-10-26): a move and a hotbar
-  shortcut are drag and drop only, with no keyboard path for now (temporary exception in rule 9.3). All other
-  actions stay keyboard reachable: create, rename, delete, open a category, and the breadcrumb. The marks
-  (multi-select) exist only for a drag, so they have no keyboard path either.
+  Each tile has a menu button: "Move to…" for an image, and "Rename", "Move to…", and "Delete" for a category.
+  Decision (user, 2026-10-26): a drag needs no keyboard path for now (temporary exception in rule 9.3); a hotbar
+  shortcut is made only by a drag. The tile menu is a feature of its own (user, 2026-10-26), and it also lets the
+  keyboard move a tile. The marks (multi-select) are made with the pointer only.
 - **Videos:** only the tiles of the current category are in the DOM. Their videos play while the picker is open
   and stop when it closes or changes category.
 - **Size:** the existing resize grip and the `paletteSize` client setting stay. The grip moves to the corner that
@@ -116,11 +117,12 @@ must open it for a token that is not selected or not on the viewed scene. So the
 
 ### 5.1 Default placement
 
-`placePicker(anchor, centerY, size, viewport)` in `picker-placement.mjs` puts the picker to the left of the trigger
-and keeps it inside the viewport. Decision (2026-10-26): its vertical center is on the token center for a picker
-from the Token HUD. The picker follows the trigger and the token on each canvas pan, token move, and window resize
-(section 4). Decision (user, 2026-10-26): a picker from the hotbar has no trigger place; `centerPicker` puts it in
-the center of the viewport. The trigger point chooses with `placement` ("trigger" or "center", section 3).
+`getBesideTrigger(anchor, centerY, size)` in `picker-placement.mjs` gives the place left of the trigger. Decision
+(2026-10-26): its vertical center is on the token center for a picker from the Token HUD. Decision (user,
+2026-10-26): a picker from the hotbar has no trigger place; `getViewportCenter` gives the center of the viewport. The
+trigger point chooses with `placement` ("trigger" or "center", section 3). Both functions do not clamp: a dragged
+offset is added first (5.2), and `keepInViewport` runs last. The picker is placed again on each canvas pan, token
+move, HUD render, window resize, and navigation (section 4).
 
 Decision (2026-10-26): no token avoidance and no candidate sides. The user tested the clamped placement, and a
 picker that covers the token is not a problem.
@@ -135,16 +137,20 @@ picker that covers the token is not a problem.
 Decision (2026-10-26): the picker header is the drag handle, as in a window. No modifier key.
 
 - A drag on the header (not on its buttons) moves the picker. A move below 4 pixels is a click and changes nothing.
-- Decision (2026-10-26): a dragged position is a plain translation in screen pixels from a reference point to the
-  picker top-left corner, with no further math: position = point + offset (`decisions/picker-offsets.mjs`). The
-  trigger point names the reference:
+- Decision (user, 2026-10-26, after v0.5.0; replaces the token-center offset of phase B): a dragged position is a
+  plain translation in screen pixels from the default place (5.1, not clamped) to the picker top-left corner:
+  position = default place + offset (`decisions/picker-offsets.mjs`). So a moved picker acts as a picker at its
+  default place, only shifted: a picker from the HUD follows the HUD button on a pan, a zoom, and a token move. The
+  old offset (from the token center) moved the picker against the HUD on a zoom, because the HUD button moves away
+  from the token center when the token grows on the screen.
 
-  | Reference | Used by | Point |
+  | Reference | Used by | Default place |
   |---|---|---|
-  | `token` | Token HUD | The token center on the screen (`compat.getTokenScreenRect`, the same math as the core HUD) |
-  | `screen` | Every other trigger | The viewport top-left corner: the offset is the screen position |
+  | `token` | Token HUD | Left of the HUD button, centered on the token (`compat.getTokenScreenRect`) |
+  | `screen` | Hotbar | The viewport center |
 
-  The offsets are screen pixels, not canvas units: the distance to the token center stays the same at every zoom.
+  A stored offset has the mark `from: "default"`. The offsets of v0.5.0 have no mark; they count as empty, so the
+  picker opens at its default place until the next drag.
 - One slot for each reference, in the client setting `pickerPosition`: `{token, screen}`. One shared value would
   move a picker from the hotbar to a place that the user chose relative to a token. A drag saves only the slot of the
   current reference, and the other slot is read right before the write (rule 4.1). The token slot is one value for
@@ -211,7 +217,9 @@ writes only the changed category keys, with `-=` keys for deletions. It serializ
 
 - **Create:** the "+ category" button creates a category in the current category, with an inline name field.
 - **Rename and delete:** in the menu of a category tile. Delete asks for a confirmation if the category has
-  content. Asset tiles have no menu.
+  content.
+- **Move to…:** in the menu of every tile: a list of the root and all categories, indented. The current place shows,
+  but cannot be selected. For a category, the list leaves out the category and everything below it.
 - **Open:** a click on a category tile. The breadcrumb goes back.
 - **Drag and drop** (HTML5 drag and drop, one payload format for the picker and the hotbar, section 7.2):
 
@@ -237,7 +245,8 @@ writes only the changed category keys, with `-=` keys for deletions. It serializ
   - Only tiles of the shown category can be marked. A navigation and a close
     clear the marks. Escape clears them before it closes the picker (popup, then marks, then picker).
   - A drag of a marked tile moves all marked tiles. A drag of a tile that is not marked moves only that tile.
-    Rename and delete stay single.
+    "Move to…" in the menu of a marked tile moves all marked tiles. The menu of two or more marked tiles has only
+    "Move to…". Rename and delete stay single.
   - A move of several tiles is one write (`planMoveItems`). A target that is a moved category, or that is below
     one, is refused for the full move. A tile that is already at the target is skipped.
   - A hotbar drop (phase D) uses only the dragged tile.
@@ -354,8 +363,8 @@ scripts/
   decisions/                   pure, no Foundry or DOM globals (ESLint enforces this)
     gallery-rules.mjs          who may manage a gallery; token name visibility on hover
     folder-list.mjs            changes to the folder list, applied to the list as it is at the write
-    picker-placement.mjs       picker size limits, placement next to the trigger, clamp into the viewport
-    picker-offsets.mjs         dragged position: translation from the token center or the screen origin
+    picker-placement.mjs       picker size limits, default places (beside the trigger, screen center), clamp
+    picker-offsets.mjs         dragged position: translation from the default place
     picker-view.mjs            template data of the picker
     screen-geometry.mjs        edges, fractions, clamp (shared by the hover display and the picker)
     category-tree.mjs          tree rules (6.2)
@@ -440,9 +449,9 @@ picker in real use.
 | B1 | Drag its header to another place. | The picker follows the pointer and stays inside the screen. After the release, the reset button (pin icon) shows. Only the token slot is saved. |
 | B2 | Click the header without a move. | Nothing moves; nothing is saved. |
 | B3 | Click a header button (eye, gear, close). | The button acts; the picker does not move. |
-| B4 | After B1, zoom or pan the canvas. | The picker keeps the same screen distance to the token center. |
+| B4 | After B1, zoom or pan the canvas. | The picker keeps the same screen distance to the HUD button, as at its default place. |
 | B5 | After B1, move the token (or let another user move it). | The picker follows the token during the move animation. |
-| B6 | After B1, open the picker from another token. | The same screen distance to that token center. |
+| B6 | After B1, open the picker from another token. | The same screen distance to the HUD button of that token. |
 | B7 | After B1, put the token near a screen edge. | The picker stays inside the screen. |
 | B8 | After B1, drag the resize grip, then close and open again. | It opens with the new size, where the user left it. |
 | B9 | Click the reset button. | The button goes away; only the token slot is cleared; the picker goes back to B0. |
@@ -452,8 +461,7 @@ picker in real use.
 
 ### 11.3 Phase C user flows
 
-Open the picker from the Token HUD with real input, as in 11.1. "Menu" is the menu button of a category tile. A move
-is a drag only (rule 9.3, temporary exception). Each flow that
+Open the picker from the Token HUD with real input, as in 11.1. "Menu" is the menu button of a tile. Each flow that
 writes checks the User flag `flags.token-hover-art.categories.<baseActorId>` after the action.
 
 | # | User action | Expected result |
@@ -464,8 +472,8 @@ writes checks the User flag `flags.token-hover-art.categories.<baseActorId>` aft
 | C4 | Click "Gallery" in the breadcrumb. | The root shows again, with "Moods" and the assets that are in no category. |
 | C5 | Drag an asset onto the "Moods" tile. | The asset leaves the root and shows in "Moods". |
 | C6 | In "Moods", drag that asset onto "Gallery" in the breadcrumb. | The asset goes back to the root. |
-| C7 | Keyboard: Tab to the menu of a category, Enter, "Rename", type a name, Enter. | The category gets the name. The focus stays in the picker. |
-| C8 | Drag "Moods" onto its own tile, and onto the breadcrumb part where it is now. | The drop is refused (no drop cursor). Nothing changes. A drop into its own child cannot happen in the UI: a category and its children never show together, and the unit tests cover the rule. |
+| C7 | Keyboard: Tab to the menu of an asset, Enter, "Move to…", select "Angry". | The asset moves into "Angry". The focus stays in the picker. |
+| C8 | Drag "Moods" onto its own tile and onto its breadcrumb part; open "Move to…" of "Moods". | The drops are refused (no drop cursor), and "Move to…" does not list "Moods" or "Angry". Nothing changes. |
 | C9 | Create "Calm" at the root and drag it onto "Moods". | "Calm" moves into "Moods". |
 | C10 | Menu of "Moods", "Rename", type "Feelings", Enter. | The tile and the breadcrumb show "Feelings". |
 | C11 | Menu of "Feelings", "Delete", confirm. | "Feelings" and all categories in it go away. Their assets show at the root again. No asset leaves the gallery. |
@@ -480,7 +488,7 @@ writes checks the User flag `flags.token-hover-art.categories.<baseActorId>` aft
 | C20 | After the moves, press W. | The canvas pans: no picker control keeps the focus after a mouse action. |
 | C21 | Ctrl+click three assets, then drag one of them onto a category tile. | The three tiles show as marked. All three move into the category in one User update. The token art does not change. |
 | C22 | Click an asset, then Shift+click an asset four tiles later. | The click sets the hover art. The five tiles from the first to the last are marked. |
-| C23 | Ctrl+click a category and an asset, then drag the asset onto another category tile. | Both move into the target, in one User update. |
+| C23 | Ctrl+click a category and an asset, open the menu of one of them, "Move to…", select a target. | The menu has only "Move to…", and the list leaves out the marked category. Both move, in one User update. |
 | C24 | Mark two tiles, drag a third tile that is not marked onto a category. | Only the dragged tile moves. The marks stay. |
 | C25 | Mark tiles, then press Escape twice. | The first Escape clears the marks, the second closes the picker. |
 | C26 | Keyboard: Shift+Enter on a focused image tile. | It selects the hover art, as a plain Enter does. No tile is marked. |

@@ -1,59 +1,63 @@
 /*
- * The position that the user dragged the gallery picker to: a plain translation in screen pixels from a reference
- * point to the picker top-left corner. position = point + offset. No Foundry and no DOM access.
+ * The position that the user dragged the gallery picker to: a plain translation in screen pixels from the default
+ * place of the picker to its top-left corner. position = default place + offset. No Foundry and no DOM access.
  *
- * - Token reference (picker from the Token HUD): the token center on the screen, so the picker follows the token.
- * - Screen reference (every other trigger): the viewport top-left corner, so the offset is the screen position.
+ * The default place comes from the trigger (picker-placement.mjs): left of the Token HUD button, or the viewport
+ * center for the hotbar. So a moved picker acts as a picker at its default place, only shifted: a picker from the HUD
+ * follows the HUD button on a pan, a zoom, and a token move (user decision 2026-10-26, after v0.5.0).
  *
- * The offsets are in screen pixels, not canvas units: the picker has a fixed screen size, so its distance to the
- * token stays the same at every canvas zoom.
+ * The offsets are in screen pixels, not canvas units: the picker has a fixed screen size.
  */
+
+/**
+ * Marks an offset from the default place. v0.5.0 stored offsets from the token center or the screen origin, without
+ * this mark; such an offset would put the picker at another place, so it counts as no offset.
+ */
+const OFFSET_BASE = "default";
 
 /**
  * @typedef {object} PickerOffset
- * @property {number} x  The picker left minus the reference point X.
- * @property {number} y  The picker top minus the reference point Y.
+ * @property {number} x       The picker left minus the default left.
+ * @property {number} y       The picker top minus the default top.
+ * @property {"default"} from
  */
 
 /**
- * @typedef {object} Point
- * @property {number} x
- * @property {number} y
+ * @typedef {object} Position
+ * @property {number} left
+ * @property {number} top
  */
-
-/** The reference point of the screen reference. */
-export const SCREEN_ORIGIN = Object.freeze({x: 0, y: 0});
 
 /**
  * @param {import("./screen-geometry.mjs").Rect} token  The token rectangle on the screen.
- * @returns {Point}  The reference point of the token reference.
+ * @returns {{x: number, y: number}}  The token center. The picker from the HUD has its vertical center there.
  */
-export function getTokenOrigin(token) {
+export function getTokenCenter(token) {
   return {x: token.left + (token.width / 2), y: token.top + (token.height / 2)};
 }
 
 /**
- * @param {{left: number, top: number}} picker  The picker position on the screen.
- * @param {Point} origin
+ * @param {Position} picker   The picker position on the screen.
+ * @param {Position} base     The default place of the picker now (not clamped).
  * @returns {PickerOffset}
  */
-export function toOffset(picker, origin) {
-  return {x: picker.left - origin.x, y: picker.top - origin.y};
+export function toOffset(picker, base) {
+  return {x: picker.left - base.left, y: picker.top - base.top, from: OFFSET_BASE};
 }
 
 /**
  * @param {PickerOffset} offset
- * @param {Point} origin
- * @returns {{left: number, top: number}}  Not clamped: the caller keeps the picker inside the viewport.
+ * @param {Position} base     The default place of the picker now (not clamped).
+ * @returns {Position}  Not clamped: the caller keeps the picker inside the viewport.
  */
-export function fromOffset(offset, origin) {
-  return {left: origin.x + offset.x, top: origin.y + offset.y};
+export function fromOffset(offset, base) {
+  return {left: base.left + offset.x, top: base.top + offset.y};
 }
 
 /**
  * @param {*} value  A stored value.
- * @returns {boolean}  Is the value a valid PickerOffset?
+ * @returns {boolean}  Is the value a valid offset from the default place?
  */
 export function isOffset(value) {
-  return Number.isFinite(value?.x) && Number.isFinite(value?.y);
+  return Number.isFinite(value?.x) && Number.isFinite(value?.y) && (value?.from === OFFSET_BASE);
 }

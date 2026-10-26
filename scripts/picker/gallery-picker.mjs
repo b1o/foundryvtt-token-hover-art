@@ -62,7 +62,7 @@ export class GalleryPicker {
   /** The page elements. They are created at the first open. @type {PickerShell|null} */
   #shell = null;
 
-  /** The marks and the drag and drop. @type {PickerTiles|null} */
+  /** The marks, the drag and drop, and the tile menus. @type {PickerTiles|null} */
   #tiles = null;
 
   /** @type {OpenPickerListeners|null} */
@@ -433,8 +433,7 @@ export class GalleryPicker {
         case "navigate": return this.#navigate(button.dataset.categoryId || null);
         case "new-category":
           return this.#toggleMenu(button, event, () => this.#categories.buildCreateField(scope, this.#categoryId));
-        case "category-menu": return this.#toggleMenu(button, event, () => this.#categories.buildCategoryMenu(scope,
-          getGallery(tokenDoc.actor), button.closest(".tha-tile").dataset.categoryId));
+        case "tile-menu": return this.#toggleMenu(button, event, () => this.#tiles.buildTileMenu(button));
       }
     } catch(err) {
       reportActionError(err);

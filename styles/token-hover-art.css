@@ -343,14 +343,24 @@
   margin: 0 4px 4px;
 }
 
+/* Core gives text inputs dark text for light windows. The popup is dark, so the field gets the light picker colors. */
 .tha-picker .tha-menu-field {
   margin: 0 0 2px;
   width: 100%;
   box-sizing: border-box;
+  color: var(--tha-text-1);
+  caret-color: var(--tha-text-1);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--tha-border-light);
+}
+
+.tha-picker .tha-menu-field:focus {
+  border-color: var(--tha-highlight);
+  box-shadow: 0 0 4px var(--tha-glow);
 }
 
 .tha-picker .tha-menu-item {
-  padding: 3px 6px;
+  padding: 3px 6px 3px calc(6px + (var(--tha-menu-depth, 0) * 12px));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -361,11 +371,16 @@
   color: var(--tha-text-2);
 }
 
-.tha-picker .tha-menu-item:hover,
+.tha-picker .tha-menu-item:hover:not(:disabled),
 .tha-picker .tha-menu-item:focus-visible {
   background: rgba(255, 255, 255, 0.1);
   color: var(--tha-text-1);
   box-shadow: none;
+}
+
+.tha-picker .tha-menu-item:disabled {
+  cursor: default;
+  color: var(--tha-text-5);
 }
 
 

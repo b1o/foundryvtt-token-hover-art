@@ -13,6 +13,8 @@ import { isPointerClick } from "../keyboard-focus.mjs";
 /**
  * @typedef {object} MenuItem
  * @property {string} label
+ * @property {number} [depth]          The indent level in a list of categories.
+ * @property {boolean} [isDisabled]    Shown, but not selectable: the current place in "Move to…".
  * @property {function(): void} [onSelect]     An action. The popup closes before it runs.
  * @property {function(): MenuSpec} [next]     A next step that the popup shows instead. An item with neither only
  *                                             closes the popup.
@@ -117,7 +119,7 @@ export class PickerMenu {
       element.removeAttribute("aria-label");
       return;
     }
-    element.innerHTML = this.#template(spec);
+    element.innerHTML = this.#template({...spec, items: spec.items.map(item => ({depth: 0, ...item}))});
     element.setAttribute("role", spec.field ? "dialog" : "menu");
     element.setAttribute("aria-label", spec.title);
     this.#place();
@@ -177,8 +179,8 @@ export class PickerMenu {
     items[(index + (isDown ? 1 : -1) + items.length) % items.length].focus();
   }
 
-  /** @returns {HTMLButtonElement[]}  The items, in order. */
+  /** @returns {HTMLButtonElement[]}  The enabled items, in order. */
   #getItems() {
-    return [...this.#element.querySelectorAll(".tha-menu-item")];
+    return [...this.#element.querySelectorAll(".tha-menu-item:not(:disabled)")];
   }
 }

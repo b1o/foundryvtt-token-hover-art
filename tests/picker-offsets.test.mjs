@@ -1,27 +1,24 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  SCREEN_ORIGIN, getTokenOrigin, toOffset, fromOffset, isOffset
-} from "../scripts/decisions/picker-offsets.mjs";
+import { getTokenCenter, toOffset, fromOffset, isOffset } from "../scripts/decisions/picker-offsets.mjs";
 
 const rect = (left, top, width, height) => ({left, top, width, height, right: left + width, bottom: top + height});
 
-test("the token origin is the token center", () => {
-  assert.deepEqual(getTokenOrigin(rect(300, 200, 100, 60)), {x: 350, y: 230});
+test("the token center is the center of the token rectangle", () => {
+  assert.deepEqual(getTokenCenter(rect(300, 200, 100, 60)), {x: 350, y: 230});
 });
 
-test("a token offset moves the picker with the token center", () => {
-  const offset = toOffset({left: 420, top: 180}, getTokenOrigin(rect(300, 200, 100, 60)));
-  assert.deepEqual(offset, {x: 70, y: -50});
-  assert.deepEqual(fromOffset(offset, getTokenOrigin(rect(600, 500, 100, 60))), {left: 720, top: 480});
+test("an offset keeps the picker at the same distance from its default place", () => {
+  const offset = toOffset({left: 420, top: 180}, {left: 400, top: 250});
+  assert.deepEqual(offset, {x: 20, y: -70, from: "default"});
+  assert.deepEqual(fromOffset(offset, {left: 100, top: 500}), {left: 120, top: 430});
 });
 
-test("a screen offset is the screen position", () => {
-  assert.deepEqual(toOffset({left: 120, top: 80}, SCREEN_ORIGIN), {x: 120, y: 80});
-  assert.deepEqual(fromOffset({x: 120, y: 80}, SCREEN_ORIGIN), {left: 120, top: 80});
-});
-
-test("only stored offsets with two numbers are valid", () => {
-  assert.equal(isOffset({x: 0, y: -5}), true);
-  for ( const value of [null, {}, {x: "1", y: 0}, {x: NaN, y: 0}] ) assert.equal(isOffset(value), false);
+test("only offsets from the default place with two numbers are valid", () => {
+  assert.equal(isOffset({x: 0, y: -5, from: "default"}), true);
+  // An offset of v0.5.0 (from the token center) has no mark, and it would put the picker at another place.
+  assert.equal(isOffset({x: -473, y: -334}), false);
+  for ( const value of [null, {}, {x: "1", y: 0, from: "default"}, {x: NaN, y: 0, from: "default"}] ) {
+    assert.equal(isOffset(value), false);
+  }
 });

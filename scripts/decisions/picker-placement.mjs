@@ -28,32 +28,30 @@ export function clampPickerSize(size) {
 }
 
 /**
- * The default position: to the left of the trigger, with the picker center at a given height, inside the viewport.
+ * The default place next to a trigger: to the left of it, with the picker center at a given height. Not clamped: a
+ * dragged offset is added to it first (picker-offsets.mjs), and keepInViewport runs last.
  * @param {import("./screen-geometry.mjs").Rect} anchor  The screen rectangle of the trigger.
  * @param {number} centerY  The height of the picker center: the token center for a picker from the Token HUD, else
  *                          the trigger center.
  * @param {import("./screen-geometry.mjs").Size} size    The outer size of the picker.
- * @param {import("./screen-geometry.mjs").Size} viewport
  * @returns {{left: number, top: number}}
  */
-export function placePicker(anchor, centerY, size, viewport) {
-  const position = {left: anchor.left - ANCHOR_GAP - size.width, top: centerY - (size.height / 2)};
-  return clampToViewport(position, size, viewport);
+export function getBesideTrigger(anchor, centerY, size) {
+  return {left: anchor.left - ANCHOR_GAP - size.width, top: centerY - (size.height / 2)};
 }
 
 /**
- * The default position of a picker from the hotbar (user decision 2026-10-26): the center of the viewport.
+ * The default place of a picker from the hotbar (user decision 2026-10-26): the center of the viewport. Not clamped.
  * @param {import("./screen-geometry.mjs").Size} size  The outer size of the picker.
  * @param {import("./screen-geometry.mjs").Size} viewport
  * @returns {{left: number, top: number}}
  */
-export function centerPicker(size, viewport) {
-  const position = {left: (viewport.width - size.width) / 2, top: (viewport.height - size.height) / 2};
-  return clampToViewport(position, size, viewport);
+export function getViewportCenter(size, viewport) {
+  return {left: (viewport.width - size.width) / 2, top: (viewport.height - size.height) / 2};
 }
 
 /**
- * Keep the picker where it is, but inside the viewport. For a picker whose trigger is gone.
+ * Keep a picker position inside the viewport. The last step of every placement.
  * @param {import("./screen-geometry.mjs").Rect} rect  The screen rectangle of the picker now.
  * @param {import("./screen-geometry.mjs").Size} viewport
  * @returns {{left: number, top: number}}
