@@ -66,8 +66,9 @@ export function findByUuid(uuid) {
 /**
  * The screen rectangle of a token on the viewed canvas. It uses the same math as the core HUD container
  * (client/apps/hud/container.js:69 and hud.js:104 in v11): the global position of the primary canvas group plus the
- * token position times the stage scale. getGlobalPosition updates the PIXI transforms first, so the result is
- * correct also inside a canvasPan hook, before the next canvas render. token.x and token.y follow a move animation.
+ * token position times the stage scale. The public canvas.clientCoordinatesFromCanvas (pixi/board.js:1444) reads
+ * stage.worldTransform, which is old until the next canvas render. getGlobalPosition updates the PIXI transforms first,
+ * so the result does not depend on the render order. token.x and token.y follow a move animation.
  * @param {Token} token
  * @returns {{left: number, top: number, right: number, bottom: number, width: number, height: number}}
  */

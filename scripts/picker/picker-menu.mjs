@@ -2,8 +2,8 @@ import { keepInViewport } from "../decisions/picker-placement.mjs";
 import { isPointerClick } from "../keyboard-focus.mjs";
 
 /*
- * The popup of the gallery picker: the category menu, the name field of a category, and a delete confirmation. One popup at a time, inside the picker element, so a press in it is not
- * an outside press.
+ * The popup of the gallery picker: the category menu, the name field of a category, and a delete confirmation. One
+ * popup at a time, inside the picker element, so a press in it is not an outside press.
  *
  * Focus: a popup that the keyboard opened takes the focus, and gives it back to its opener when it closes. A popup that
  * a pointer opened leaves the focus alone (the v11 keybinding trap, see keyboard-focus.mjs), except for a name field,

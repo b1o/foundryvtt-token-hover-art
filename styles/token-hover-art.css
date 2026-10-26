@@ -39,8 +39,8 @@
 /* The look copies the core status effects  */
 /* palette of the Token HUD.                */
 /* ---------------------------------------- */
-/* gallery-picker.mjs sets left and top, and --tha-picker-width and --tha-picker-height from the picker size
-   client setting. The picker is above the windows and below the tooltips. */
+/* picker-position.mjs sets left and top. picker-gestures.mjs sets --tha-picker-width and --tha-picker-height from
+   the picker size client setting. The picker is above the windows and below the tooltips. */
 .tha-picker {
   position: fixed;
   z-index: calc(var(--z-index-tooltip, 9999) - 1);

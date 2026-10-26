@@ -181,8 +181,10 @@ function normalizeFolder(folder) {
 }
 
 /**
- * Find the storage of a typed folder path. Core uses the same rule for wildcard token images
- * (Files.parseWildcardPath): paths in "icons/" are in the public storage, all other paths are in the data storage.
+ * Find the storage of a typed folder path: paths in "icons/" are in the public storage, all other paths are in the
+ * data storage. The v11 server uses this rule for wildcard token images (Files.parseWildcardPath, server code only).
+ * The server rule also reads S3 URLs; the module does not, so a typed S3 path is not supported (user decision
+ * 2026-10-26). A folder that the folder picker selects keeps its storage and bucket (gallery-sheet.mjs).
  * @param {string} folder
  * @returns {string}
  */
