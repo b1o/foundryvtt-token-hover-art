@@ -1,6 +1,7 @@
 import { MODULE_ID, SETTINGS, POSITIONS } from "./constants.mjs";
 import { isEdgePosition } from "./decisions/screen-geometry.mjs";
 import { clampPickerSize, DEFAULT_PICKER_SIZE } from "./decisions/picker-placement.mjs";
+import { isOffset } from "./decisions/picker-offsets.mjs";
 
 /**
  * The color settings, with their defaults. The defaults give the original look of the display
@@ -157,6 +158,15 @@ export function registerSettings(onDisplayChange) {
     type: Object,
     default: {...DEFAULT_PICKER_SIZE}
   });
+
+  // The positions that this user dragged the gallery picker to: one slot for each reference (see
+  // picker-offsets.mjs). An empty slot means the automatic placement next to the trigger.
+  game.settings.register(MODULE_ID, SETTINGS.PICKER_POSITION, {
+    scope: "client",
+    config: false,
+    type: Object,
+    default: {token: null, screen: null}
+  });
 }
 
 const get = key => game.settings.get(MODULE_ID, key);
@@ -226,6 +236,30 @@ export const getPickerSize = () => clampPickerSize(get(SETTINGS.PICKER_SIZE));
 
 /** @param {{width: number, height: number}} size */
 export const setPickerSize = size => set(SETTINGS.PICKER_SIZE, clampPickerSize(size));
+
+/**
+ * @typedef {object} PickerOffsets
+ * @property {import("./decisions/picker-offsets.mjs").PickerOffset|null} token   For a picker from the Token HUD.
+ * @property {import("./decisions/picker-offsets.mjs").PickerOffset|null} screen  For every other trigger.
+ */
+
+/** @returns {PickerOffsets}  The dragged picker positions. An invalid stored slot counts as empty. */
+export function getPickerOffsets() {
+  const stored = get(SETTINGS.PICKER_POSITION);
+  return {
+    token: isOffset(stored?.token) ? stored.token : null,
+    screen: isOffset(stored?.screen) ? stored.screen : null
+  };
+}
+
+/**
+ * Change one slot. The other slot is read right before the write, so it stays.
+ * @param {keyof PickerOffsets} reference
+ * @param {object|null} offset  The new offset, or null to go back to the automatic placement.
+ */
+export const setPickerOffset = (reference, offset) => {
+  return set(SETTINGS.PICKER_POSITION, {...getPickerOffsets(), [reference]: offset});
+};
 
 /**
  * @param {string} key  A key of COLOR_DEFAULTS.

@@ -61,11 +61,15 @@
   display: none;
 }
 
+/* The header is the move handle (see picker-gestures.mjs). Its buttons keep the pointer cursor. */
 .tha-picker-header {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 0 2px 4px;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
 }
 
 .tha-picker-title {

@@ -31,16 +31,18 @@ document describes the full feature before the first commit.
 ```js
 /**
  * @typedef {object} PickerContext
- * @property {string} tokenUuid           The token whose hover art the picker changes.
- * @property {string|null} categoryId     The category to open, or null for the root.
- * @property {DOMRect|null} anchorRect    The screen rectangle of the trigger, for placement.
- * @property {"hud"|"hotbar"} source      Which trigger point opened the picker.
+ * @property {string} tokenUuid                        The token whose hover art the picker changes.
+ * @property {string|null} categoryId                  The category to open, or null for the root.
+ * @property {function(): (DOMRect|null)} getAnchorRect  The trigger rectangle now, for the default placement.
+ * @property {"token"|"screen"} positionReference      What a pinned position is relative to (section 5.2).
+ * @property {function(): (Rect|null)} [getTokenRect]  For "token": the token rectangle on the screen now.
+ * @property {"hud"|"hotbar"} source                   Which trigger point opened the picker.
  */
 ```
 
 - A trigger point calls `picker.open(context)` and does nothing else.
-- `source` is read in one function only (`describeContext`), which returns the small differences: the header
-  text, and whether the token rectangle must stay uncovered.
+- The trigger point decides the position reference: the Token HUD uses "token", every other trigger uses "screen".
+- `source` is read in one place only: a picker from the HUD closes on a scene change.
 - An asset shortcut does not open the picker. It calls `applyAsset(tokenDoc, path)`, the same function that the
   picker uses for a click on an asset. So both paths have one owner (rule 3.1).
 
@@ -107,46 +109,54 @@ must open it for a token that is not selected or not on the viewed scene. So the
 
 ## 5. Picker position
 
-### 5.1 Automatic placement
+### 5.1 Default placement
 
-A pure function in `picker-placement.mjs`:
+`placePicker(anchor, centerY, size, viewport)` in `picker-placement.mjs` puts the picker to the left of the trigger
+and keeps it inside the viewport. Decision (2026-10-26): its vertical center is on the token center for a picker
+from the Token HUD, and on the trigger center for every other trigger. The picker follows the trigger and the token
+on each canvas pan, token move, and window resize (section 4).
 
-```js
-/**
- * @param {Rect} anchor      The trigger rectangle.
- * @param {Rect|null} avoid  The token rectangle on the screen, or null.
- * @param {Size} size        The picker size.
- * @param {Size} viewport
- * @returns {{left: number, top: number, corner: "nw"|"ne"|"sw"|"se"}}
- */
-export function placePicker(anchor, avoid, size, viewport) {}
-```
+Decision (2026-10-26): no token avoidance and no candidate sides. The user tested the clamped placement, and a
+picker that covers the token is not a problem.
 
-1. Try the candidates in this order: left of the anchor (as today), right, above, below. Each candidate aligns
-   one edge with the anchor and grows away from it.
-2. Take the first candidate that is fully inside the viewport and does not intersect `avoid`.
-3. If no candidate fits, take the candidate with the largest visible area, and clamp it into the viewport.
-4. `corner` is the corner of the picker nearest to the anchor. The resize grip goes to the opposite corner.
+| Source | Anchor |
+|---|---|
+| HUD | The HUD button rectangle. |
+| Hotbar | The rectangle of the macro slot (selector in `compat.mjs`, rule 8.3). |
+| Macro run from the directory | The bottom center of the viewport. |
 
-Anchors:
+### 5.2 Header drag and saved position
 
-| Source | Anchor | Avoid |
-|---|---|---|
-| HUD | The HUD button rectangle. | The token rectangle on the screen. |
-| Hotbar | The rectangle of the macro slot (selector in `compat.mjs`, rule 8.3). | None. |
-| Macro run from the directory | The bottom center of the viewport. | None. |
+Decision (2026-10-26): the picker header is the drag handle, as in a window. No modifier key.
 
-### 5.2 Ctrl free move
+- A drag on the header (not on its buttons) moves the picker. A move below 4 pixels is a click and changes nothing.
+- Decision (2026-10-26): a dragged position is a plain translation in screen pixels from a reference point to the
+  picker top-left corner, with no further math: position = point + offset (`decisions/picker-offsets.mjs`). The
+  trigger point names the reference:
 
-- While the user holds Ctrl, a drag on the picker moves it, the same as the hover display. Asset clicks are off
-  during Ctrl.
-- The drag end saves a pinned position for this user (client setting `pickerPosition`, same format as the
-  `CustomPosition` of the hover display: nearest edges and fractions).
-- A pinned position replaces the automatic placement for every trigger point. A "reset position" header button
-  removes the pin.
-- The pinned position is clamped into the viewport each time it is applied, not only at the drag (rule 3.2).
-- The edge-and-fraction math moves from `display-layout.mjs` into `screen-geometry.mjs`, which both the hover
-  display and the picker use (rule 3.3).
+  | Reference | Used by | Point |
+  |---|---|---|
+  | `token` | Token HUD | The token center on the screen (`compat.getTokenScreenRect`, the same math as the core HUD) |
+  | `screen` | Every other trigger | The viewport top-left corner: the offset is the screen position |
+
+  The offsets are screen pixels, not canvas units: the distance to the token center stays the same at every zoom.
+- One slot for each reference, in the client setting `pickerPosition`: `{token, screen}`. One shared value would
+  move a picker from the hotbar to a place that the user chose relative to a token. A drag saves only the slot of the
+  current reference, and the other slot is read right before the write (rule 4.1). The token slot is one value for
+  all tokens of the user.
+- An empty slot means the default placement (5.1).
+- A picker from the HUD follows its token: canvas pan and zoom, token move animation (`refreshToken`), and the HUD
+  render after a move. The placement runs once, in the next animation frame, because core moves the HUD after these
+  events.
+- A resize of a moved picker saves the new offset too, because the resize moves its left edge.
+- The saved position is clamped into the viewport each time it is applied, not only at the drag (rule 3.2).
+- The move cursor on the header is the only sign of the drag. No tooltip (rule 9.4).
+- A reset button (pin icon) shows in the header only while the slot of the current reference is set, as a pressed
+  toggle. A click clears that slot only, and the picker goes back to its default place.
+- The drag loop (pointer capture and the 4-pixel threshold) is shared with the hover display (`pointer-drag.mjs`,
+  rule 3.3).
+- Keyboard: no keyboard move. A keyboard user gets the automatic placement and the reset button. Core windows
+  also have no keyboard move in v11.
 
 ### 5.3 Not in scope
 
@@ -305,6 +315,7 @@ scripts/
   compat.mjs                   version differences; the Token HUD column; findByUuid (D: hotbar slot, hotbar lock)
   sheet-header-buttons.mjs     the "Hover Art" button in actor sheet headers (opens the gallery manager)
   keyboard-focus.mjs           give the focus back after a pointer click (v11 keybinding trap)
+  pointer-drag.mjs             one pointer drag with a click threshold (hover display and picker)
   gallery-sheet.mjs            the gallery manager
   color-fields.mjs
   data/
@@ -314,16 +325,17 @@ scripts/
   decisions/                   pure, no Foundry or DOM globals (ESLint enforces this)
     gallery-rules.mjs          who may manage a gallery; token name visibility on hover
     folder-list.mjs            changes to the folder list, applied to the list as it is at the write
-    picker-placement.mjs       picker size limits and placement (B: candidates and token avoidance)
+    picker-placement.mjs       picker size limits, placement next to the trigger, clamp into the viewport
+    picker-offsets.mjs         dragged position: translation from the token center or the screen origin
     picker-view.mjs            template data of the picker
     screen-geometry.mjs        edges, fractions, clamp (shared by the hover display and the picker)
     category-tree.mjs          C: tree rules (6.2)
     shortcut-payload.mjs       D: payload validation and macro naming
   picker/
     gallery-picker.mjs         state, open, close, render, actions
-    picker-resize.mjs          the resize grip
+    picker-gestures.mjs        header move and grip resize
+    picker-position.mjs        class PickerPosition: dragged or default placement, save and reset per reference
     open-picker-listeners.mjs  page listeners while open: outside press, Escape, window resize
-    picker-move.mjs            B: Ctrl move
     picker-drag-drop.mjs       C: drag sources and drop targets in the picker
   triggers/
     hud-trigger.mjs            the HUD button only
@@ -346,7 +358,7 @@ None. Decision 5 (folder behavior) was confirmed on 2026-10-26.
 | Phase | Content | Manual test (port 30011) |
 |---|---|---|
 | A | Foundation (section 8), standalone picker with the HUD trigger | The user flows in 11.1. |
-| B | Placement and Ctrl move | Token near each edge: picker fully visible, token not covered; pin, reload, reset; window resize. |
+| B | Header drag and pinned position | The user flows in 11.2. |
 | C | Categories | Create nested, move assets and categories by drag and by menu, cycle refused, delete subtree, folder rescan removes a file, GM edits a player's tree. |
 | D | Hotbar | Drag each kind; locked hotbar; token deleted; token on another scene; player without `MACRO_SCRIPT`; setting off. |
 
@@ -380,3 +392,21 @@ picker in real use.
 | A18 | Keyboard: focus the HUD button, press Enter, then Tab, Enter, and Escape. | The picker opens with the focus on the selected tile; Enter selects; Escape closes. |
 | A19 | Hover tokens while the picker is open and closed. | The hover display shows and hides as before. |
 | A20 | Player who owns a token: A1, A2, A6. | Same results; no eye button. A non-owned token has no HUD. |
+
+### 11.2 Phase B user flows
+
+| # | User action | Expected result |
+|---|---|---|
+| B0 | Open the picker from the HUD, with no saved position. | It opens left of the HUD button, with its vertical center on the token center. |
+| B1 | Drag its header to another place. | The picker follows the pointer and stays inside the screen. After the release, the reset button (pin icon) shows. Only the token slot is saved. |
+| B2 | Click the header without a move. | Nothing moves; nothing is saved. |
+| B3 | Click a header button (eye, gear, close). | The button acts; the picker does not move. |
+| B4 | After B1, zoom or pan the canvas. | The picker keeps the same screen distance to the token center. |
+| B5 | After B1, move the token (or let another user move it). | The picker follows the token during the move animation. |
+| B6 | After B1, open the picker from another token. | The same screen distance to that token center. |
+| B7 | After B1, put the token near a screen edge. | The picker stays inside the screen. |
+| B8 | After B1, drag the resize grip, then close and open again. | It opens with the new size, where the user left it. |
+| B9 | Click the reset button. | The button goes away; only the token slot is cleared; the picker goes back to B0. |
+| B10 | Drag a corner of the hover display with Ctrl (phase A behavior, shared drag code). | The display moves and resizes as before. |
+| B11 | Reload the page and open the picker from the HUD. | The token slot stays. |
+| B12 | Phase D: drag a picker from the hotbar. | Only the screen slot is saved, as the screen position. A HUD picker keeps its token slot. |

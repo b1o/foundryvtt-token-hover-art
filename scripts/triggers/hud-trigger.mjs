@@ -1,4 +1,4 @@
-import { getTokenHudColumn } from "../compat.mjs";
+import { getTokenHudColumn, findByUuid, getTokenScreenRect } from "../compat.mjs";
 import { log } from "../output.mjs";
 import { isPointerClick } from "../keyboard-focus.mjs";
 
@@ -58,6 +58,9 @@ export class HudTrigger {
     this.#button = button;
     this.#tokenUuid = tokenUuid;
     this.syncButton();
+
+    // Core renders the HUD again after a token move. The picker of this token follows the new button position.
+    if ( this.#picker.isOpenFor(tokenUuid) ) this.#picker.followTrigger();
   }
 
   /**
@@ -81,6 +84,8 @@ export class HudTrigger {
       tokenUuid,
       categoryId: null,
       getAnchorRect: () => this.#getButtonRect(tokenUuid),
+      positionReference: "token",
+      getTokenRect: () => this.#getTokenRect(tokenUuid),
       source: "hud"
     });
     if ( isPointerClick(event) ) event.currentTarget.blur();
@@ -96,6 +101,16 @@ export class HudTrigger {
   #getButtonRect(tokenUuid) {
     if ( (this.#tokenUuid !== tokenUuid) || !this.#button?.isConnected ) return null;
     return this.#button.getBoundingClientRect();
+  }
+
+  /**
+   * @param {string} tokenUuid
+   * @returns {object|null}  The screen rectangle of this token, or null if it is not on the viewed canvas.
+   */
+  #getTokenRect(tokenUuid) {
+    const token = findByUuid(tokenUuid)?.object;
+    if ( !canvas.ready || !token || token.destroyed ) return null;
+    return getTokenScreenRect(token);
   }
 
   /**

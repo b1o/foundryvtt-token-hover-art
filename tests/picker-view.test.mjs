@@ -9,6 +9,7 @@ const facts = {
   isSecret: false,
   isGM: true,
   canManage: true,
+  isMoved: false,
   isVideo: path => path.endsWith(".webm")
 };
 

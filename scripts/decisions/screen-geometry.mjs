@@ -1,6 +1,6 @@
 /*
- * Screen positions that keep their place when the window size changes. The hover display uses them now, and the
- * gallery picker will use them for a pinned position. No Foundry and no DOM access: the callers pass the values.
+ * Screen positions that keep their place when the window size changes, for the hover display, and the clamp that
+ * the gallery picker uses too. No Foundry and no DOM access: the callers pass the values.
  */
 
 /**

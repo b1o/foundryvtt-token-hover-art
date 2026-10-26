@@ -73,9 +73,10 @@
   "TOKEN_HOVER_ART.Picker.None": "No hover art",
   "TOKEN_HOVER_ART.Picker.Empty": "The gallery is empty.",
   "TOKEN_HOVER_ART.Picker.Manage": "Manage gallery",
-  "TOKEN_HOVER_ART.Picker.Resize": "Drag to resize",
-  "TOKEN_HOVER_ART.Picker.SecretOn": "Secret: only GMs and owners see this hover art. Click to show it to all users.",
-  "TOKEN_HOVER_ART.Picker.SecretOff": "Visible to all users. Click to make it secret.",
+  "TOKEN_HOVER_ART.Picker.ResetPosition": "Reset position",
+  "TOKEN_HOVER_ART.Picker.Secret": "Secret hover art",
+  "TOKEN_HOVER_ART.Picker.SecretOn": "Only GMs and owners see it",
+  "TOKEN_HOVER_ART.Picker.SecretOff": "Everyone sees it",
 
   "TOKEN_HOVER_ART.Errors.TokenMissing": "The token no longer exists. Open the hover art from the Token HUD of a token.",
   "TOKEN_HOVER_ART.Errors.NotOwner": "You do not own this token, so you cannot change its hover art. Ask the GM for ownership.",

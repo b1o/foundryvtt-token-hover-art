@@ -28,14 +28,17 @@ export function clampPickerSize(size) {
 }
 
 /**
- * Place the picker to the left of its trigger, with the top edges aligned, and keep it inside the viewport.
+ * The default position: to the left of the trigger, with the picker center at a given height, inside the viewport.
  * @param {import("./screen-geometry.mjs").Rect} anchor  The screen rectangle of the trigger.
+ * @param {number} centerY  The height of the picker center: the token center for a picker from the Token HUD, else
+ *                          the trigger center.
  * @param {import("./screen-geometry.mjs").Size} size    The outer size of the picker.
  * @param {import("./screen-geometry.mjs").Size} viewport
  * @returns {{left: number, top: number}}
  */
-export function placePicker(anchor, size, viewport) {
-  return clampToViewport({left: anchor.left - ANCHOR_GAP - size.width, top: anchor.top}, size, viewport);
+export function placePicker(anchor, centerY, size, viewport) {
+  const position = {left: anchor.left - ANCHOR_GAP - size.width, top: centerY - (size.height / 2)};
+  return clampToViewport(position, size, viewport);
 }
 
 /**

@@ -5,12 +5,12 @@ import {
   isVideo
 } from "../data/gallery-data.mjs";
 import { buildPickerView } from "../decisions/picker-view.mjs";
-import { placePicker, keepInViewport } from "../decisions/picker-placement.mjs";
 import { getCompiledTemplate } from "../compat.mjs";
 import { log, notify, reportActionError } from "../output.mjs";
 import { releaseFocusAfterPointerClick } from "../keyboard-focus.mjs";
-import { runPickerResize, applyPickerSize } from "./picker-resize.mjs";
+import { runPickerMove, runPickerResize, applyPickerSize } from "./picker-gestures.mjs";
 import { OpenPickerListeners } from "./open-picker-listeners.mjs";
+import { PickerPosition } from "./picker-position.mjs";
 
 /*
  * The gallery picker: the popover where a user selects the hover art of one token. A trigger point opens it with a
@@ -27,6 +27,9 @@ import { OpenPickerListeners } from "./open-picker-listeners.mjs";
  * @property {string|null} categoryId               The category to open, or null for the root.
  * @property {function(): (DOMRect|null)} getAnchorRect  The screen rectangle of the trigger now, or null if the
  *                                                  trigger is gone. The picker asks again when the view changes.
+ * @property {"token"|"screen"} positionReference   What a dragged position is relative to (picker-offsets.mjs).
+ * @property {function(): (DOMRect|null)} [getTokenRect]  For the "token" reference: the token rectangle on the
+ *                                                  screen now, or null if it is not on the screen.
  * @property {"hud"} source                         Which trigger point opened the picker.
  */
 
@@ -51,6 +54,8 @@ export class GalleryPicker {
 
   /** Is a placement already scheduled for the end of the current task? */
   #isPlacementScheduled = false;
+
+  #position = new PickerPosition();
 
   /** @type {function(string): (TokenDocument|null)} */
   #resolveToken;
@@ -164,16 +169,29 @@ export class GalleryPicker {
   }
 
   /**
-   * Handle the canvasPan hook: keep the picker next to its trigger. Core calls the hook before it moves the HUD to
-   * the new view (client/pixi/board.js:1234 and :1240), so the placement waits until the pan code has returned.
+   * Place the picker again after its trigger or its token moved on the screen: a canvas pan or zoom, a token move,
+   * a HUD render. The placement runs once, in the next animation frame, because core moves the HUD after these
+   * events: canvasPan comes before HUD#align (client/pixi/board.js:1234 and :1240), and the renderTokenHUD hook
+   * comes before the HUD#setPosition at the end of the render (client/apps/hud/hud.js:84).
    */
-  onCanvasPan() {
+  followTrigger() {
     if ( (this.#state !== STATES.OPEN) || this.#isPlacementScheduled ) return;
     this.#isPlacementScheduled = true;
-    queueMicrotask(() => {
+    window.requestAnimationFrame(() => {
       this.#isPlacementScheduled = false;
       if ( this.#state === STATES.OPEN ) this.#place();
     });
+  }
+
+  /**
+   * Handle the refreshToken hook: a picker from the HUD follows its token during a
+   * move animation.
+   * @param {Token} token
+   * @param {object} flags  The render flags of the refresh.
+   */
+  onRefreshToken(token, flags) {
+    if ( !flags.refreshPosition && !flags.refreshSize ) return;
+    if ( this.isOpenFor(token.document.uuid) ) this.followTrigger();
   }
 
   /**
@@ -218,6 +236,7 @@ export class GalleryPicker {
       isSecret: isSecret(tokenDoc),
       isGM: game.user.isGM,
       canManage: canManageGallery(actor, game.user),
+      isMoved: this.#position.isMoved(this.#context),
       isVideo
     });
 
@@ -233,20 +252,63 @@ export class GalleryPicker {
     if ( focusKey !== undefined ) this.#findByFocusKey(focusKey)?.focus();
   }
 
-  /**
-   * Put the picker next to its trigger. If the trigger is gone (for example, the HUD shows another token now), the
-   * picker stays where it is, inside the viewport.
-   */
   #place() {
+    this.#position.apply(this.#element, this.#context);
+  }
+
+  /**
+   * Save the place where the user dragged the picker, for this user and the reference of the context. Render again,
+   * so the reset button shows.
+   * @param {DOMRect} rect  The screen rectangle of the picker.
+   */
+  async #saveMove(rect) {
+    const context = this.#context;
+    const isSaved = await this.#position.save(rect, context);
+    if ( isSaved && (this.#context === context) ) this.#render();
+  }
+
+  /**
+   * Forget the dragged place, and put the picker at its default place again.
+   */
+  async #resetPosition() {
+    const context = this.#context;
+    await this.#position.reset(context);
+    if ( this.#context !== context ) return;
+    this.#render();
+    this.#place();
+  }
+
+  /**
+   * Start a move (header) or a resize (grip) drag. The header buttons keep their click.
+   * @param {PointerEvent} event
+   */
+  #onPointerDown(event) {
+    if ( event.button !== 0 ) return;
     const element = this.#element;
-    const rect = element.getBoundingClientRect();
-    const anchor = this.#context.getAnchorRect();
-    const viewport = {width: window.innerWidth, height: window.innerHeight};
-    const {left, top} = anchor
-      ? placePicker(anchor, {width: rect.width, height: rect.height}, viewport)
-      : keepInViewport(rect, viewport);
-    element.style.left = `${left}px`;
-    element.style.top = `${top}px`;
+    if ( event.target.closest(".tha-picker-resize") ) {
+      return runPickerResize(event, element, {
+        startSize: getPickerSize(),
+        onEnd: (size, rect) => this.#onResizeEnd(size, rect)
+      });
+    }
+    if ( event.target.closest(".tha-picker-header") && !event.target.closest("button") ) {
+      runPickerMove(event, element, rect => this.#saveMove(rect).catch(reportActionError));
+    }
+  }
+
+  /**
+   * Save the new size. A moved picker also saves its new position, because the resize moved its left edge.
+   * @param {{width: number, height: number}} size
+   * @param {DOMRect} rect
+   */
+  async #onResizeEnd(size, rect) {
+    const context = this.#context;
+    try {
+      await setPickerSize(size);
+      if ( this.#position.isMoved(context) ) await this.#position.save(rect, context);
+    } catch(err) {
+      reportActionError(err);
+    }
   }
 
   /**
@@ -268,10 +330,7 @@ export class GalleryPicker {
     element.setAttribute("role", "dialog");
     element.hidden = true;
     element.addEventListener("click", event => this.#onClick(event));
-    element.addEventListener("pointerdown", event => {
-      if ( !event.target.closest(".tha-picker-resize") ) return;
-      runPickerResize(event, element, {startSize: getPickerSize(), onEnd: size => setPickerSize(size)});
-    });
+    element.addEventListener("pointerdown", event => this.#onPointerDown(event));
     document.body.append(element);
     this.#element = element;
     this.#listeners = new OpenPickerListeners({
@@ -297,6 +356,7 @@ export class GalleryPicker {
         case "clear": return await applyAsset(tokenDoc, null);
         case "secret": return await setSecret(tokenDoc, !isSecret(tokenDoc));
         case "manage": return this.#openManager(tokenDoc.actor);
+        case "reset-position": return await this.#resetPosition();
         case "close": return this.close();
       }
     } catch(err) {

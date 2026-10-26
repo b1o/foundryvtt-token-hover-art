@@ -29,7 +29,7 @@ Then enable **Token Hover Art** in your world under **Game Settings → Manage M
    - **Add image:** one image.
    - **Add folder:** a folder and a file name filter. All matching images in that folder join the gallery.
 3. Optional: click the star to make an image the default for new tokens of this actor.
-4. Right-click a token. Click the **images** icon in the left column of the Token HUD. The hover art picker opens next to the button. Select an image, or select the "no hover art" tile. Drag the grip in the bottom-left corner of the picker to resize it; each user keeps their own size. Close the picker with its close button, with Escape, with a click outside of it, or with the HUD button again. The keyboard also works: Tab moves between the tiles, and Enter or Space selects one.
+4. Right-click a token. Click the **images** icon in the left column of the Token HUD. The hover art picker opens next to the button. Select an image, or select the "no hover art" tile. Drag the grip in the bottom-left corner of the picker to resize it; each user keeps their own size. The picker opens left of the HUD button, centered on the token. Drag its header to move it: it then keeps that place relative to the token center. It follows the token when the token moves or when you pan or zoom, and it opens at the same place next to every token. The position applies only to you. The pin button in the header puts the picker back at its default place. Close the picker with its close button, with Escape, with a click outside of it, or with the HUD button again. The keyboard also works: Tab moves between the tiles, and Enter or Space selects one.
 5. GMs can click the eye icon in the picker to make the hover art secret. Only GMs and owners see secret hover art.
 6. To move or resize the hover art: hover a token so the image shows, then hold **Ctrl**. The image gets a dashed outline, corner handles, and stays open. Drag the image to move it, or drag a corner handle to resize it. A resize keeps the aspect ratio of each image, and the opposite corner stays in place. The position and size apply only to you. To go back to the corner and the maximum height, turn off **Use my dragged position and size** in the module settings.
 
@@ -120,6 +120,7 @@ The release workflow then checks that the tag matches `module.json`, builds `mod
 | Dragged position | Client (hidden, set with Ctrl-drag) | None |
 | Dragged size (image height, % of screen) | Client (hidden, set with a Ctrl corner drag) | None |
 | Picker size | Client (hidden, set with the resize grip) | 228 × 290 px |
+| Picker position | Client (hidden, set with a header drag, removed with the pin button): one position relative to the token center, one on the screen | Left of the trigger, centered on the token |
 
 The color settings accept `#rrggbb` or `#rrggbbaa`; the last two digits are the opacity. In the settings window, each color has a color picker and an opacity slider next to the text field. An invalid value falls back to the default.
 

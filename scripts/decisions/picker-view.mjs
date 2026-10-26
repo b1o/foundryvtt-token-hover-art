@@ -10,6 +10,7 @@
  * @property {boolean} isSecret           Is the hover art of the token secret?
  * @property {boolean} isGM
  * @property {boolean} canManage          Can the user open the gallery manager?
+ * @property {boolean} isMoved            Did the user drag the picker away from its default place?
  * @property {function(string): boolean} isVideo
  */
 
@@ -17,11 +18,12 @@
  * @param {PickerFacts} facts
  * @returns {object}  The data for gallery-picker.hbs.
  */
-export function buildPickerView({tokenName, paths, selectedPath, isSecret, isGM, canManage, isVideo}) {
+export function buildPickerView({tokenName, paths, selectedPath, isSecret, isGM, canManage, isMoved, isVideo}) {
   return {
     tokenName,
     isGM,
     canManage,
+    isMoved,
     secret: isSecret,
     hasSelection: selectedPath !== null,
     images: paths.map(path => ({

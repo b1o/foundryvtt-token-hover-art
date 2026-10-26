@@ -51,7 +51,8 @@ Hooks.on("deleteToken", tokenDoc => {
 
 Hooks.on("hoverToken", (token, hovered) => hoverDisplay.onHoverToken(token, hovered));
 Hooks.on("canvasReady", () => hoverDisplay.preloadScene());
-Hooks.on("canvasPan", () => picker.onCanvasPan());
+Hooks.on("canvasPan", () => picker.followTrigger());
+Hooks.on("refreshToken", (token, flags) => picker.onRefreshToken(token, flags));
 Hooks.on("canvasTearDown", () => {
   picker.onCanvasTearDown();
   hoverDisplay.hide();

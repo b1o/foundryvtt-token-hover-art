@@ -64,6 +64,24 @@ export function findByUuid(uuid) {
 }
 
 /**
+ * The screen rectangle of a token on the viewed canvas. It uses the same math as the core HUD container
+ * (client/apps/hud/container.js:69 and hud.js:104 in v11): the global position of the primary canvas group plus the
+ * token position times the stage scale. getGlobalPosition updates the PIXI transforms first, so the result is
+ * correct also inside a canvasPan hook, before the next canvas render. token.x and token.y follow a move animation.
+ * @param {Token} token
+ * @returns {{left: number, top: number, right: number, bottom: number, width: number, height: number}}
+ */
+export function getTokenScreenRect(token) {
+  const origin = canvas.primary.getGlobalPosition();
+  const scale = canvas.stage.scale.x;
+  const left = origin.x + (token.x * scale);
+  const top = origin.y + (token.y * scale);
+  const width = token.w * scale;
+  const height = token.h * scale;
+  return {left, top, right: left + width, bottom: top + height, width, height};
+}
+
+/**
  * The left column of the Token HUD. The only selector into the core HUD markup (FOUNDRY_MODULE_RULES.md 8.3).
  * It is "div.col.left" in v11 (templates/hud/token-hud.html) and later versions.
  * @param {HTMLElement|jQuery} html  The element of the renderTokenHUD hook.

@@ -25,6 +25,7 @@ export const SETTINGS = Object.freeze({
   OWNERS_MANAGE_GALLERY: "ownersManageGallery",
   // The key keeps its old name, so the size that users saved for the HUD palette stays.
   PICKER_SIZE: "paletteSize",
+  PICKER_POSITION: "pickerPosition",
   USE_CUSTOM_POSITION: "useCustomPosition",
   CUSTOM_POSITION: "customPosition",
   CUSTOM_SIZE: "customSize"

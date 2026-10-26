@@ -3,6 +3,7 @@ import {
   getDisplayCorner, getMaxHeightPercent, isCustomLayoutUsed, getCustomPosition, getCustomSize, saveCustomLayout
 } from "../settings.mjs";
 import { clamp, toEdgePosition } from "../decisions/screen-geometry.mjs";
+import { runPointerDrag } from "../pointer-drag.mjs";
 
 /*
  * The layout of the hover display: where it is and how large its image is.
@@ -14,9 +15,6 @@ import { clamp, toEdgePosition } from "../decisions/screen-geometry.mjs";
  * of the screen height ({height}). The width follows the aspect ratio of each image, so images of different shapes
  * keep their shape at the same height.
  */
-
-/** A pointer move below this distance in pixels is a click, not a drag. A click saves nothing. */
-const DRAG_THRESHOLD = 4;
 
 /** The smallest image height in pixels that a resize can make. */
 const MIN_IMAGE_HEIGHT = 48;
@@ -65,33 +63,22 @@ export class DisplayLayout {
   }
 
   /**
-   * Run a pointer drag on the display with a handler. A drag below DRAG_THRESHOLD is a click and saves nothing.
+   * Run a pointer drag on the display with a handler. A click (no move past the drag threshold) saves nothing.
    * @param {HTMLElement} display
    * @param {PointerEvent} event      The pointerdown event.
    * @param {DragHandler} handler
    * @param {function(): void} onDragEnd
    */
   #runDrag(display, event, handler, onDragEnd) {
-    let moved = false;
     this.#isDragging = true;
-
-    const onMove = moveEvent => {
-      const dx = moveEvent.clientX - event.clientX;
-      const dy = moveEvent.clientY - event.clientY;
-      if ( !moved && (Math.hypot(dx, dy) < DRAG_THRESHOLD) ) return;
-      moved = true;
-      handler.onMove(dx, dy);
-    };
-    const onEnd = async () => {
-      display.removeEventListener("pointermove", onMove);
-      this.#isDragging = false;
-      if ( moved ) await handler.save();
-      onDragEnd();
-    };
-
-    display.setPointerCapture(event.pointerId);
-    display.addEventListener("pointermove", onMove);
-    display.addEventListener("lostpointercapture", onEnd, {once: true});
+    runPointerDrag(display, event, {
+      onMove: (dx, dy) => handler.onMove(dx, dy),
+      onEnd: async isMoved => {
+        this.#isDragging = false;
+        if ( isMoved ) await handler.save();
+        onDragEnd();
+      }
+    });
   }
 }
 

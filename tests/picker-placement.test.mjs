@@ -7,20 +7,26 @@ import {
 const viewport = {width: 1000, height: 800};
 const rect = (left, top, width, height) => ({left, top, width, height, right: left + width, bottom: top + height});
 
-test("the picker opens to the left of the trigger with the top edges aligned", () => {
-  assert.deepEqual(placePicker(rect(600, 200, 40, 40), {width: 300, height: 200}, viewport), {left: 292, top: 200});
+test("the picker opens to the left of the trigger with its center at the given height", () => {
+  assert.deepEqual(placePicker(rect(600, 200, 40, 40), 350, {width: 300, height: 200}, viewport),
+    {left: 292, top: 250});
 });
 
 test("a trigger near the left edge keeps the picker inside the viewport", () => {
-  assert.deepEqual(placePicker(rect(100, 200, 40, 40), {width: 300, height: 200}, viewport), {left: 0, top: 200});
+  assert.deepEqual(placePicker(rect(100, 200, 40, 40), 300, {width: 300, height: 200}, viewport),
+    {left: 0, top: 200});
 });
 
-test("a trigger near the bottom edge moves the picker up into the viewport", () => {
-  assert.deepEqual(placePicker(rect(600, 750, 40, 40), {width: 300, height: 200}, viewport), {left: 292, top: 600});
+test("a center near the top or the bottom edge moves the picker into the viewport", () => {
+  assert.deepEqual(placePicker(rect(600, 750, 40, 40), 770, {width: 300, height: 200}, viewport),
+    {left: 292, top: 600});
+  assert.deepEqual(placePicker(rect(600, 10, 40, 40), 30, {width: 300, height: 200}, viewport),
+    {left: 292, top: 0});
 });
 
 test("a picker larger than the viewport starts at the top-left corner", () => {
-  assert.deepEqual(placePicker(rect(600, 200, 40, 40), {width: 1200, height: 900}, viewport), {left: 0, top: 0});
+  assert.deepEqual(placePicker(rect(600, 200, 40, 40), 220, {width: 1200, height: 900}, viewport),
+    {left: 0, top: 0});
 });
 
 test("a picker without a trigger keeps its position when it is inside the viewport", () => {
