@@ -19,6 +19,7 @@ const facts = {
   isGM: true,
   canManage: true,
   isMoved: false,
+  canDragToHotbar: true,
   isVideo: path => path.endsWith(".webm")
 };
 

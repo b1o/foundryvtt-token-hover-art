@@ -1,12 +1,13 @@
 import { getPickerOffsets, setPickerOffset } from "../settings.mjs";
-import { placePicker, keepInViewport } from "../decisions/picker-placement.mjs";
+import { placePicker, centerPicker, keepInViewport } from "../decisions/picker-placement.mjs";
 import { SCREEN_ORIGIN, getTokenOrigin, toOffset, fromOffset } from "../decisions/picker-offsets.mjs";
 
 /*
  * Where the gallery picker is. The context of the trigger names the reference ("token" for the Token HUD, "screen"
  * for every other trigger). If the user dragged the picker for that reference, it goes to the same translation from
- * the reference point (picker-offsets.mjs). Else it goes to its default place next to the trigger, with its center
- * on the token center or on the trigger center (picker-placement.mjs). In every case it stays inside the viewport.
+ * the reference point (picker-offsets.mjs). Else it goes to its default place (picker-placement.mjs): next to the
+ * trigger with its center on the token center (Token HUD), or the viewport center (hotbar). In every case it stays
+ * inside the viewport.
  */
 
 /**
@@ -69,10 +70,11 @@ export class PickerPosition {
    * @param {DOMRect} rect
    * @param {{width: number, height: number}} size
    * @param {{width: number, height: number}} viewport
-   * @returns {{left: number, top: number}}  Left of the trigger, centered on the token or on the trigger. If the
-   *                                         trigger is gone, the picker stays where it is.
+   * @returns {{left: number, top: number}}  The viewport center, or left of the trigger and centered on the token or
+   *                                         on the trigger. If the trigger is gone, the picker stays where it is.
    */
   #getDefaultTarget(context, rect, size, viewport) {
+    if ( context.placement === "center" ) return centerPicker(size, viewport);
     const anchor = context.getAnchorRect();
     if ( !anchor ) return rect;
     const token = (context.positionReference === "token") ? context.getTokenRect() : null;

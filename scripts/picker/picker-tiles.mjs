@@ -78,9 +78,11 @@ export class PickerTiles {
   #getDrag(source) {
     return this.#withScope(({tokenUuid}) => {
       const {thaDrag: kind, categoryId, path} = source.dataset;
+      const key = getTileKey(source);
       return {
         payload: createShortcutPayload({kind, tokenUuid, categoryId, path}),
-        items: toMovedItems(this.#marks.getMovedKeys(getTileKey(source)))
+        // "No hover art" has no tile key: it goes only to the hotbar, so it moves nothing in the picker.
+        items: toMovedItems(key ? this.#marks.getMovedKeys(key) : [])
       };
     }) || null;
   }

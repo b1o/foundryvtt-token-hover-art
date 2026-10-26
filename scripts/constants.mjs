@@ -2,14 +2,16 @@ export const MODULE_ID = "token-hover-art";
 
 /**
  * Flag keys. The gallery sources (manual images and folders) are on the base Actor.
- * The selection and the secret state are on each Token. The picker categories are on each User.
+ * The selection and the secret state are on each Token. The picker categories are on each User. The shortcut data is
+ * on each hotbar Macro of the module.
  */
 export const FLAGS = Object.freeze({
   IMAGES: "images",
   FOLDERS: "folders",
   SELECTED: "selected",
   SECRET: "secret",
-  CATEGORIES: "categories"
+  CATEGORIES: "categories",
+  SHORTCUT: "shortcut"
 });
 
 export const SETTINGS = Object.freeze({
@@ -24,6 +26,7 @@ export const SETTINGS = Object.freeze({
   SHOW_NAME: "showName",
   ENABLED: "enabled",
   OWNERS_MANAGE_GALLERY: "ownersManageGallery",
+  HOTBAR_SHORTCUTS: "hotbarShortcuts",
   // The key keeps its old name, so the size that users saved for the HUD palette stays.
   PICKER_SIZE: "paletteSize",
   PICKER_POSITION: "pickerPosition",

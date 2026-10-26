@@ -1,4 +1,5 @@
 import { TEMPLATES } from "../constants.mjs";
+import { areHotbarShortcutsEnabled } from "../settings.mjs";
 import {
   getGallery, getSelectedArt, applyAsset, isSecret, setSecret, canManageGallery, getBaseActor, hasModuleFlagChange,
   isVideo
@@ -29,12 +30,13 @@ import { PickerTiles } from "./picker-tiles.mjs";
  * @typedef {object} PickerContext
  * @property {string} tokenUuid                     The token whose hover art the picker changes.
  * @property {string|null} categoryId               The category to open, or null for the root.
- * @property {function(): (DOMRect|null)} getAnchorRect  The screen rectangle of the trigger now, or null if the
- *                                                  trigger is gone. The picker asks again when the view changes.
+ * @property {"trigger"|"center"} placement         The default place: next to the trigger, or the viewport center.
+ * @property {function(): (DOMRect|null)} [getAnchorRect]  For "trigger": the screen rectangle of the trigger now, or
+ *                                                  null if it is gone. The picker asks again when the view changes.
  * @property {"token"|"screen"} positionReference   What a dragged position is relative to (picker-offsets.mjs).
  * @property {function(): (DOMRect|null)} [getTokenRect]  For the "token" reference: the token rectangle on the
  *                                                  screen now, or null if it is not on the screen.
- * @property {"hud"} source                         Which trigger point opened the picker.
+ * @property {"hud"|"hotbar"} source                Which trigger point opened the picker.
  */
 
 /**
@@ -297,6 +299,7 @@ export class GalleryPicker {
       isGM: game.user.isGM,
       canManage: canManageGallery(actor, game.user),
       isMoved: this.#position.isMoved(this.#context),
+      canDragToHotbar: areHotbarShortcutsEnabled(),
       isVideo
     });
     this.#shell.render(view, game.i18n.format("TOKEN_HOVER_ART.Picker.Title", {name: tokenDoc.name}));

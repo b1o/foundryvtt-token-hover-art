@@ -15,6 +15,7 @@ import { getHolderIds } from "./category-tree.mjs";
  * @property {boolean} isGM
  * @property {boolean} canManage          Can the user open the gallery manager?
  * @property {boolean} isMoved            Did the user drag the picker away from its default place?
+ * @property {boolean} canDragToHotbar    Are hotbar shortcuts on? "No hover art" is a drag source only then.
  * @property {function(string): boolean} isVideo
  */
 
@@ -38,6 +39,7 @@ export function buildPickerView(facts) {
     isGM: facts.isGM,
     canManage: facts.canManage,
     isMoved: facts.isMoved,
+    canDragToHotbar: facts.canDragToHotbar,
     secret: facts.isSecret,
     isRoot,
     hasSelection: selectedPath !== null,

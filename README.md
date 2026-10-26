@@ -33,7 +33,13 @@ Then enable **Token Hover Art** in your world under **Game Settings → Manage M
 5. GMs can click the eye icon in the picker to make the hover art secret. Only GMs and owners see secret hover art.
 6. Sort the gallery into categories (folders) in the picker. The categories belong to you and to this actor; other users have their own. Click the folder-plus icon to create a category in the shown category, type a name, and press Enter. Click a category to open it; the path above the tiles goes back. Drag an image or a category onto a category tile or onto a part of the path to move it. A category tile has a menu (the dots on the tile) with **Rename** and **Delete**. Moves are drag and drop only for now. A delete never removes an image from the gallery: its images go back to the top. An image is in at most one category.
 7. Mark several tiles to move them together: Ctrl+click (Cmd+click on macOS) marks one tile, Shift+click marks a range, and Ctrl+Shift+click adds a range. Then drag one of the marked tiles. A plain click removes the marks. Escape removes them too.
-8. To move or resize the hover art: hover a token so the image shows, then hold **Ctrl**. The image gets a dashed outline, corner handles, and stays open. Drag the image to move it, or drag a corner handle to resize it. A resize keeps the aspect ratio of each image, and the opposite corner stays in place. The position and size apply only to you. To go back to the corner and the maximum height, turn off **Use my dragged position and size** in the module settings.
+8. Hotbar shortcuts: drag a tile of the picker, or the hover art button of the Token HUD, onto a hotbar slot. The slot gets a script macro:
+   - **Token HUD button:** the macro opens the picker of that token, in the center of the screen.
+   - **Category tile:** the macro opens the picker in that category.
+   - **Image tile or "No hover art":** the macro sets that hover art at once, with no picker. Its icon is the image (a video shows the core video icon).
+
+   A shortcut works also for a token on a scene that you do not view. A second drop of the same tile reuses the macro. GMs can turn shortcuts off with the setting **Hotbar shortcuts**.
+9. To move or resize the hover art: hover a token so the image shows, then hold **Ctrl**. The image gets a dashed outline, corner handles, and stays open. Drag the image to move it, or drag a corner handle to resize it. A resize keeps the aspect ratio of each image, and the opposite corner stays in place. The position and size apply only to you. To go back to the corner and the maximum height, turn off **Use my dragged position and size** in the module settings.
 
 ## Folder filters
 
@@ -63,6 +69,7 @@ A folder scan needs the core permission **Use File Browser**. So the scan result
 | Secret state | `flags.token-hover-art.secret` on the TokenDocument | One token |
 | Defaults | The same two flags on `Actor#prototypeToken` | New tokens |
 | Picker categories | `flags.token-hover-art.categories.<actorId>.<categoryId>` on the User: `{name, parentId, sort, paths}` | One user and one actor |
+| Hotbar shortcut | `flags.token-hover-art.shortcut` on the Macro: `{kind, tokenUuid, categoryId, path}`. The macro command only calls the module API; it contains no data. | The macro author |
 
 The gallery is the manual images plus the files of all folders, without duplicates. An unlinked token has a synthetic Actor. The module always writes to the base Actor, so all tokens of the actor share one gallery.
 
@@ -70,6 +77,7 @@ The gallery is the manual images plus the files of all folders, without duplicat
 
 - The Token HUD shows only to GMs and to owners of the actor (core rule). So only they can select hover art.
 - Each user sees and changes only their own categories. Every client receives the User documents, so category names are not secret.
+- A hotbar shortcut is a script macro. Core runs script macros only for users with the permission **Use Script Macros** (default: Player). A user without it gets a message at the drop.
 - The gallery window opens only for GMs and, if **Allow owners to manage galleries** is on, for owners. When it is off, owners can still select hover art from the gallery, but they cannot change the gallery. The setting controls the user interface; it is not a server rule, so a user with console access could still write the gallery data.
 - To browse files or to add folders, a user needs the core permission **Use File Browser** (default: Trusted Player). To upload files, a user needs **Upload New Files** (default: Assistant GM). Set these in **Configure Permissions**.
 
@@ -116,6 +124,7 @@ The release workflow then checks that the tag matches `module.json`, builds `mod
 | Border width (px) | World | 1 |
 | Border color | World | `#333333ff` |
 | Allow owners to manage galleries | World (reloads all clients) | On |
+| Hotbar shortcuts | World | On |
 | Hide delay (ms) | World | 250 |
 | Default folder filter | World | `*.png` |
 | Show token name | World | Off |
@@ -124,7 +133,7 @@ The release workflow then checks that the tag matches `module.json`, builds `mod
 | Dragged position | Client (hidden, set with Ctrl-drag) | None |
 | Dragged size (image height, % of screen) | Client (hidden, set with a Ctrl corner drag) | None |
 | Picker size | Client (hidden, set with the resize grip) | 228 × 290 px |
-| Picker position | Client (hidden, set with a header drag, removed with the pin button): one position relative to the token center, one on the screen | Left of the trigger, centered on the token |
+| Picker position | Client (hidden, set with a header drag, removed with the pin button): one position relative to the token center (Token HUD), one on the screen (hotbar) | Token HUD: left of the button, centered on the token. Hotbar: screen center |
 
 The color settings accept `#rrggbb` or `#rrggbbaa`; the last two digits are the opacity. In the settings window, each color has a color picker and an opacity slider next to the text field. An invalid value falls back to the default.
 

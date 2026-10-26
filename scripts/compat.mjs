@@ -92,6 +92,13 @@ export function getTokenHudColumn(html) {
 }
 
 /**
+ * @returns {boolean}  Is the hotbar locked? Core refuses to replace a macro in a locked hotbar (Hotbar#locked, v11).
+ */
+export function isHotbarLocked() {
+  return ui.hotbar?.locked === true;
+}
+
+/**
  * Get the root HTML element of a render hook. Application V1 hooks pass a jQuery object;
  * ApplicationV2 hooks (the Token HUD from v13) pass an HTMLElement.
  * @param {HTMLElement|jQuery} html

@@ -22,6 +22,8 @@
   "TOKEN_HOVER_ART.Settings.DefaultFilter.Hint": "The file name filter for a new gallery folder when no filter is typed. Use glob syntax: \"*.png\", \"hero-*.webp\", or \"{*.png,*.webp}\" for more than one type. The match is case-sensitive.",
   "TOKEN_HOVER_ART.Settings.OwnersManageGallery.Name": "Allow owners to manage galleries",
   "TOKEN_HOVER_ART.Settings.OwnersManageGallery.Hint": "On: owners of an actor can add and remove images and folders in its gallery. Off: only GMs can manage galleries. Owners can still select the hover art of their tokens from the gallery. Changing this setting reloads all clients.",
+  "TOKEN_HOVER_ART.Settings.HotbarShortcuts.Name": "Hotbar shortcuts",
+  "TOKEN_HOVER_ART.Settings.HotbarShortcuts.Hint": "Users can drag a category, an image, or the hover art button of the Token HUD to the hotbar. A shortcut is a script macro, so players need the core permission \"Use Script Macros\".",
   "TOKEN_HOVER_ART.Settings.ShowName.Name": "Show token name",
   "TOKEN_HOVER_ART.Settings.ShowName.Hint": "Show the token name below the hover art. The name shows only if the user can see the token nameplate.",
   "TOKEN_HOVER_ART.Settings.UseCustomPosition.Name": "Use my dragged position and size",
@@ -90,6 +92,13 @@
   "TOKEN_HOVER_ART.Picker.DeleteImages": "The images in it ({count}) go back to the gallery. No image leaves the gallery.",
   "TOKEN_HOVER_ART.Picker.Cancel": "Cancel",
   "TOKEN_HOVER_ART.Picker.Marked": "Marked",
+
+  "TOKEN_HOVER_ART.Hotbar.MacroName": "Hover art: {name}",
+  "TOKEN_HOVER_ART.Hotbar.Disabled": "The GM turned hotbar shortcuts off. Ask the GM to turn on \"Hotbar shortcuts\" in the module settings.",
+  "TOKEN_HOVER_ART.Hotbar.NoScriptPermission": "A hover art shortcut is a script macro. You need the core permission \"Use Script Macros\". Ask the GM for it.",
+  "TOKEN_HOVER_ART.Hotbar.InvalidShortcut": "This macro has no valid hover art shortcut. Drag a new shortcut from the hover art picker.",
+  "TOKEN_HOVER_ART.Hotbar.TokenMissing": "The token of this shortcut no longer exists. Drag a new shortcut from the hover art picker.",
+  "TOKEN_HOVER_ART.Hotbar.CategoryMissing": "The category of this shortcut no longer exists. The picker shows the whole gallery.",
 
   "TOKEN_HOVER_ART.Errors.TokenMissing": "The token no longer exists. Open the hover art from the Token HUD of a token.",
   "TOKEN_HOVER_ART.Errors.NotOwner": "You do not own this token, so you cannot change its hover art. Ask the GM for ownership.",

@@ -61,7 +61,8 @@
   </div>
   {{/each}}
   {{#if isRoot}}
-  <div class="tha-tile">
+  {{!-- "No hover art" cannot be marked or moved; it is a drag source for the hotbar only. --}}
+  <div class="tha-tile" {{#if canDragToHotbar}}draggable="true" data-tha-drag="asset"{{/if}}>
     <button type="button" class="tha-choice tha-choice-none {{#unless hasSelection}}active{{/unless}}"
             data-tha-action="clear" data-tha-focus-key="none"
             aria-pressed="{{#if hasSelection}}false{{else}}true{{/if}}"

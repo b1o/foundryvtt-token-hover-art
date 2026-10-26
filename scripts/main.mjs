@@ -6,11 +6,13 @@ import { HoverArtGallery } from "./gallery-sheet.mjs";
 import { addHeaderButton, addHeaderControl } from "./sheet-header-buttons.mjs";
 import { GalleryPicker } from "./picker/gallery-picker.mjs";
 import { HudTrigger } from "./triggers/hud-trigger.mjs";
+import { HotbarTrigger } from "./triggers/hotbar-trigger.mjs";
 import { DisplayLayout } from "./hover/display-layout.mjs";
 import { HoverDisplay } from "./hover/hover-display.mjs";
 import { FolderSources } from "./data/folder-sources.mjs";
 import { CategoryStore } from "./data/category-store.mjs";
 import { findByUuid, preloadTemplates } from "./compat.mjs";
+import { MODULE_ID } from "./constants.mjs";
 
 const timers = {setTimeout: (fn, ms) => window.setTimeout(fn, ms), clearTimeout: id => window.clearTimeout(id)};
 const folderSources = new FolderSources();
@@ -18,19 +20,23 @@ const openManager = actor => HoverArtGallery.open(actor, folderSources);
 
 const hoverDisplay = new HoverDisplay({layout: new DisplayLayout(), timers});
 
+const categoryStore = new CategoryStore();
 const picker = new GalleryPicker({
   resolveToken: findByUuid,
   openManager,
   onStateChange: () => hudTrigger.syncButton(),
-  categoryStore: new CategoryStore()
+  categoryStore
 });
 const hudTrigger = new HudTrigger({picker});
+const hotbarTrigger = new HotbarTrigger({picker, categoryStore});
 
 Hooks.once("init", () => {
   registerSettings(() => hoverDisplay.refresh());
   preloadTemplates([TEMPLATES.GALLERY_SHEET]);
   picker.loadTemplate();
   hoverDisplay.activateMoveKey();
+  // The command of every shortcut macro calls this (hotbar-trigger.mjs).
+  game.modules.get(MODULE_ID).api = Object.freeze({runShortcut: macro => hotbarTrigger.runShortcut(macro)});
 });
 
 Hooks.on("renderSettingsConfig", addColorFields);
@@ -39,6 +45,7 @@ Hooks.on("getActorSheetHeaderButtons", (sheet, buttons) => addHeaderButton(sheet
 Hooks.on("getHeaderControlsActorSheetV2", (sheet, controls) => addHeaderControl(sheet, controls, openManager));
 
 Hooks.on("renderTokenHUD", (hud, html) => hudTrigger.onRenderTokenHUD(hud, html));
+Hooks.on("hotbarDrop", (hotbar, data, slot) => hotbarTrigger.onHotbarDrop(data, slot));
 
 /** A change of the token's art or secret state, by any user, updates the picker and the hover display. */
 Hooks.on("updateToken", (tokenDoc, change) => {

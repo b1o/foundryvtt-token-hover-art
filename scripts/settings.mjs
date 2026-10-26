@@ -103,6 +103,16 @@ export function registerSettings(onDisplayChange) {
     requiresReload: true
   });
 
+  // Read at each drop, each run, and each render of a drag source, so a change needs no reload.
+  game.settings.register(MODULE_ID, SETTINGS.HOTBAR_SHORTCUTS, {
+    name: "TOKEN_HOVER_ART.Settings.HotbarShortcuts.Name",
+    hint: "TOKEN_HOVER_ART.Settings.HotbarShortcuts.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.register(MODULE_ID, SETTINGS.SHOW_NAME, {
     name: "TOKEN_HOVER_ART.Settings.ShowName.Name",
     hint: "TOKEN_HOVER_ART.Settings.ShowName.Hint",
@@ -196,6 +206,9 @@ export const getHideDelayMs = () => get(SETTINGS.HIDE_DELAY);
 export const getDefaultFilter = () => get(SETTINGS.DEFAULT_FILTER);
 
 export const mayOwnersManageGallery = () => get(SETTINGS.OWNERS_MANAGE_GALLERY);
+
+/** @returns {boolean}  May users drag hover art shortcuts to the hotbar and run them? */
+export const areHotbarShortcutsEnabled = () => get(SETTINGS.HOTBAR_SHORTCUTS);
 
 export const isTokenNameShown = () => get(SETTINGS.SHOW_NAME);
 

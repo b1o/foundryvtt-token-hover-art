@@ -42,6 +42,17 @@ export function placePicker(anchor, centerY, size, viewport) {
 }
 
 /**
+ * The default position of a picker from the hotbar (user decision 2026-10-26): the center of the viewport.
+ * @param {import("./screen-geometry.mjs").Size} size  The outer size of the picker.
+ * @param {import("./screen-geometry.mjs").Size} viewport
+ * @returns {{left: number, top: number}}
+ */
+export function centerPicker(size, viewport) {
+  const position = {left: (viewport.width - size.width) / 2, top: (viewport.height - size.height) / 2};
+  return clampToViewport(position, size, viewport);
+}
+
+/**
  * Keep the picker where it is, but inside the viewport. For a picker whose trigger is gone.
  * @param {import("./screen-geometry.mjs").Rect} rect  The screen rectangle of the picker now.
  * @param {import("./screen-geometry.mjs").Size} viewport

@@ -34,7 +34,8 @@ document describes the full feature before the first commit.
  * @typedef {object} PickerContext
  * @property {string} tokenUuid                        The token whose hover art the picker changes.
  * @property {string|null} categoryId                  The category to open, or null for the root.
- * @property {function(): (DOMRect|null)} getAnchorRect  The trigger rectangle now, for the default placement.
+ * @property {"trigger"|"center"} placement           The default place: next to the trigger, or the viewport center.
+ * @property {function(): (DOMRect|null)} [getAnchorRect]  For "trigger": the trigger rectangle now.
  * @property {"token"|"screen"} positionReference      What a pinned position is relative to (section 5.2).
  * @property {function(): (Rect|null)} [getTokenRect]  For "token": the token rectangle on the screen now.
  * @property {"hud"|"hotbar"} source                   Which trigger point opened the picker.
@@ -117,8 +118,9 @@ must open it for a token that is not selected or not on the viewed scene. So the
 
 `placePicker(anchor, centerY, size, viewport)` in `picker-placement.mjs` puts the picker to the left of the trigger
 and keeps it inside the viewport. Decision (2026-10-26): its vertical center is on the token center for a picker
-from the Token HUD, and on the trigger center for every other trigger. The picker follows the trigger and the token
-on each canvas pan, token move, and window resize (section 4).
+from the Token HUD. The picker follows the trigger and the token on each canvas pan, token move, and window resize
+(section 4). Decision (user, 2026-10-26): a picker from the hotbar has no trigger place; `centerPicker` puts it in
+the center of the viewport. The trigger point chooses with `placement` ("trigger" or "center", section 3).
 
 Decision (2026-10-26): no token avoidance and no candidate sides. The user tested the clamped placement, and a
 picker that covers the token is not a problem.
@@ -126,8 +128,7 @@ picker that covers the token is not a problem.
 | Source | Anchor |
 |---|---|
 | HUD | The HUD button rectangle. |
-| Hotbar | The rectangle of the macro slot (selector in `compat.mjs`, rule 8.3). |
-| Macro run from the directory | The bottom center of the viewport. |
+| Hotbar (also a macro run from the directory) | None. Decision (user, 2026-10-26): the picker opens in the center of the viewport (`placement: "center"`). |
 
 ### 5.2 Header drag and saved position
 
@@ -282,18 +283,23 @@ Decision (user, 2026-10-26): the picker header is not a drag source; it stays th
 - The shortcut data goes into `flags.token-hover-art.shortcut` (the payload without `type`). The command text never
   contains data, so no data is ever run as code.
 - Name: `Hover art: <token>`, `Hover art: <token> › <category path>`, or `Hover art: <token> › <file name>`.
-- Image: the token image, a folder icon, the asset image (an icon for a video or for "No hover art").
+- Image (the hotbar shows it with `<img>`, so a video cannot show):
+  - gallery: the token image, or `icons/svg/video.svg` for a video token image;
+  - category: `modules/token-hover-art/icons/category.svg` (v11 has no folder icon in `icons/svg`);
+  - asset: the image itself, `icons/svg/video.svg` for a video, `icons/svg/cancel.svg` for "No hover art".
 - Reuse: if the user already has a module macro with the same shortcut flags, the drop reuses it.
 - A shortcut is made only by a drag (rule 9.3, temporary exception). There is no "Add to hotbar" menu entry.
 
 ### 7.4 `runShortcut(macro)`
 
+0. Setting "Hotbar shortcuts" off: notification, stop.
 1. Validate the flags (rule 7.4). Invalid data: notification, stop.
 2. Resolve the token with `fromUuidSync`. Missing: "The token of this shortcut no longer exists. Drag a new
    shortcut from the hover art picker." Stop.
 3. Check `tokenDoc.isOwner`. Not owner: notification, stop.
 4. By kind:
-   - `gallery`: `picker.open({tokenUuid, categoryId: null, anchorRect: slot rect, source: "hotbar"})`.
+   - `gallery`: `picker.open({tokenUuid, categoryId: null, placement: "center", positionReference: "screen",
+     source: "hotbar"})`. The picker opens in the viewport center (5.1).
    - `category`: the same, with `categoryId`. If the category no longer exists, open the root and tell the user.
    - `asset`: `applyAsset(tokenDoc, path)`. The path must still be in the gallery, or be `null`. If not:
      notification, no change (rule 3.2).
@@ -305,8 +311,10 @@ tokens exist on each client.
 
 New world setting "Hotbar shortcuts" (Boolean, default on). Its hint: "Players can drag the picker, a category, or
 an asset to the hotbar. A shortcut is a script macro, so players need the core permission 'Use Script Macros'."
-When it is off, the drag sources are not draggable and `runShortcut` tells the user that the GM turned shortcuts
-off. A drop by a user without `MACRO_SCRIPT` gives a notification that names the permission.
+When it is off, the drag sources that exist only for the hotbar (the HUD button and "No hover art") are not
+draggable, a drop on the hotbar gives a notification, and `runShortcut` tells the user that the GM turned shortcuts
+off. Category and asset tiles stay draggable, because a drag also moves them between categories (6.4). A drop by a
+user without `MACRO_SCRIPT` gives a notification that names the permission.
 
 ## 8. Foundation work (before the features)
 
@@ -325,7 +333,7 @@ The new features change these files, so these fixes come first:
 
 ## 9. Files
 
-Status after phase C: the files without a phase mark exist. The others come in phase D.
+Status after phase D: all files exist.
 
 ```
 scripts/
@@ -333,7 +341,7 @@ scripts/
   constants.mjs
   settings.mjs                 registration and typed accessors
   output.mjs                   prefixed log and notifications
-  compat.mjs                   version differences; the Token HUD column; findByUuid (D: hotbar slot, hotbar lock)
+  compat.mjs                   version differences; the Token HUD column; findByUuid; the hotbar lock
   sheet-header-buttons.mjs     the "Hover Art" button in actor sheet headers (opens the gallery manager)
   keyboard-focus.mjs           give the focus back after a pointer click (v11 keybinding trap)
   pointer-drag.mjs             one pointer drag with a click threshold (hover display and picker)
@@ -352,7 +360,7 @@ scripts/
     screen-geometry.mjs        edges, fractions, clamp (shared by the hover display and the picker)
     category-tree.mjs          tree rules (6.2)
     tile-marks.mjs             multi-select: marks, ranges, the items of a move (6.4)
-    shortcut-payload.mjs       the drag payload (C); D: payload validation and macro naming
+    shortcut-payload.mjs       the drag payload, its validation, and the parts of a macro name
   picker/
     gallery-picker.mjs         state, open, close, render, actions
     picker-gestures.mjs        header move and grip resize
@@ -367,13 +375,15 @@ scripts/
     picker-drag-drop.mjs       drag sources and drop targets in the picker
   triggers/
     hud-trigger.mjs            the HUD button only
-    hotbar-trigger.mjs         D: hotbarDrop, runShortcut, macro reuse
+    hotbar-trigger.mjs         hotbarDrop, runShortcut, macro reuse
   hover/
     hover-display.mjs          the hover display (class HoverDisplay)
     display-layout.mjs         its position and size (class DisplayLayout)
 templates/
   gallery-picker.hbs           replaces hud-palette.hbs
   picker-menu.hbs              the popup of the picker
+icons/
+  category.svg                 the icon of a category shortcut (v11 has no folder icon in icons/svg)
   gallery-sheet.hbs
 tests/                         node:test unit tests for decisions/
 ```
@@ -475,3 +485,29 @@ writes checks the User flag `flags.token-hover-art.categories.<baseActorId>` aft
 | C25 | Mark tiles, then press Escape twice. | The first Escape clears the marks, the second closes the picker. |
 | C26 | Keyboard: Shift+Enter on a focused image tile. | It selects the hover art, as a plain Enter does. No tile is marked. |
 | C27 | Mark tiles, then open a category or click a plain tile. | The marks clear. |
+
+### 11.4 Phase D user flows
+
+Real input as in 11.1. "Drop" is an HTML5 drag from the picker or the HUD onto an empty slot of the hotbar, unless
+the flow names another slot. Each flow that creates a macro checks the macro (type, command, flags, author, image)
+after the drop. Delete the test macros after the test.
+
+| # | User action | Expected result |
+|---|---|---|
+| D1 | Drag the hover art button of the Token HUD onto a hotbar slot. | A script macro "Hover art: <token>" with the token image takes the slot. The HUD and the picker state do not change. |
+| D2 | Click the D1 macro. | The picker opens for the token, at the root, in the center of the screen. |
+| D3 | Drop a category tile. Click the macro. | Macro "Hover art: <token> › <category path>" with a folder icon. The picker opens in that category. |
+| D4 | Drop an image tile. Click the macro. | Macro "Hover art: <token> › <file name>" with the image as icon. No picker opens; the token gets that hover art. |
+| D5 | Drop "No hover art". Click the macro. | Cancel icon. The token loses its hover art. |
+| D6 | Drop the same image tile on another slot. | The existing macro is reused; no second macro is created. |
+| D7 | Lock the hotbar, drop on a slot that has a macro. | Notification that the hotbar is locked; the slot keeps its macro. A drop on an empty slot still works. |
+| D8 | Delete the token, then click a D1 macro of it. | Notification with a next step; nothing opens. |
+| D9 | Put the token on a scene that the user does not view. Click its gallery and image shortcuts. | The picker opens for the token; the image shortcut changes its art. |
+| D10 | Delete the category of a D3 macro, then click the macro. | The picker opens at the root, with a notification. |
+| D11 | Remove the image of a D4 macro from the gallery, then click the macro. | Notification; the art does not change. |
+| D12 | Player without "Use Script Macros": drop a tile on the hotbar. | Notification that names the permission; no macro is created. |
+| D13 | GM turns "Hotbar shortcuts" off. Player: drag a tile to the hotbar; click an old shortcut. | Notification on the drop and on the click. The HUD button and "No hover art" are not draggable; category and image tiles still move between categories. |
+| D14 | Drag the picker from a hotbar shortcut (B12), then open it from the HUD. | Only the screen slot of `pickerPosition` changes; the HUD picker keeps its place. |
+| D15 | Press the number key of a D1 macro. | The picker opens in the center of the screen, as in D2. |
+| D16 | Open the picker from the HUD, then click a D1 macro of another token. | The picker shows the other token. |
+| D17 | After a drag to the hotbar, press W (check `game.keyboard.hasFocus`). | No element keeps the focus. |

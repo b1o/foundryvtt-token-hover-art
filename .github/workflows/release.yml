@@ -34,7 +34,7 @@ jobs:
           fi
 
       - name: Build module.zip
-        run: zip -r module.zip module.json README.md LICENSE lang scripts styles templates
+        run: zip -r module.zip module.json README.md LICENSE lang scripts styles templates icons
 
       - name: Attach the assets to the release
         env:

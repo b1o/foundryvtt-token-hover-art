@@ -1,11 +1,15 @@
 import { getTokenHudColumn, findByUuid, getTokenScreenRect } from "../compat.mjs";
 import { log } from "../output.mjs";
+import { areHotbarShortcutsEnabled } from "../settings.mjs";
+import { createShortcutPayload } from "../decisions/shortcut-payload.mjs";
 import { isPointerClick } from "../keyboard-focus.mjs";
 
 /*
  * The Token HUD trigger point: a button in the left column of the HUD that opens the gallery picker for the HUD
  * token. Foundry shows the Token HUD only to GMs and to owners of the token (Token#_canHUD), and the picker checks
  * the ownership again, so the button needs no permission check.
+ *
+ * A drag of the button to the hotbar makes a gallery shortcut (hotbar-trigger.mjs), if hotbar shortcuts are on.
  *
  * The HUD is rendered again for many reasons (a token move, a selection change). Each render creates a new button,
  * and the button state comes from the picker, so it is always correct.
@@ -53,6 +57,10 @@ export class HudTrigger {
     button.setAttribute("aria-label", game.i18n.localize("TOKEN_HOVER_ART.Picker.Open"));
     button.innerHTML = '<i class="fas fa-images" aria-hidden="true"></i>';
     button.addEventListener("click", event => this.#onClick(event, tokenUuid));
+    if ( areHotbarShortcutsEnabled() ) {
+      button.draggable = true;
+      button.addEventListener("dragstart", event => onDragStart(event, tokenUuid));
+    }
     column.append(button);
 
     this.#button = button;
@@ -83,6 +91,7 @@ export class HudTrigger {
     this.#picker.toggle({
       tokenUuid,
       categoryId: null,
+      placement: "trigger",
       getAnchorRect: () => this.#getButtonRect(tokenUuid),
       positionReference: "token",
       getTokenRect: () => this.#getTokenRect(tokenUuid),
@@ -122,4 +131,16 @@ export class HudTrigger {
     this.#isMissingColumnReported = true;
     log.warn("The Token HUD has no left column. The hover art button is not added.");
   }
+}
+
+/**
+ * Start a drag of a gallery shortcut. The pointer press focused the button, and a drag ends in no click, so the focus
+ * goes away here (the v11 keybinding trap, see keyboard-focus.mjs).
+ * @param {DragEvent} event
+ * @param {string} tokenUuid
+ */
+function onDragStart(event, tokenUuid) {
+  event.dataTransfer.setData("text/plain", JSON.stringify(createShortcutPayload({kind: "gallery", tokenUuid})));
+  event.dataTransfer.effectAllowed = "copy";
+  event.currentTarget.blur();
 }

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  placePicker, keepInViewport, clampPickerSize, DEFAULT_PICKER_SIZE, PICKER_SIZE_LIMITS
+  placePicker, centerPicker, keepInViewport, clampPickerSize, DEFAULT_PICKER_SIZE, PICKER_SIZE_LIMITS
 } from "../scripts/decisions/picker-placement.mjs";
 
 const viewport = {width: 1000, height: 800};
@@ -27,6 +27,11 @@ test("a center near the top or the bottom edge moves the picker into the viewpor
 test("a picker larger than the viewport starts at the top-left corner", () => {
   assert.deepEqual(placePicker(rect(600, 200, 40, 40), 220, {width: 1200, height: 900}, viewport),
     {left: 0, top: 0});
+});
+
+test("a centered picker has its center on the viewport center, and a large picker starts at the corner", () => {
+  assert.deepEqual(centerPicker({width: 300, height: 201}, viewport), {left: 350, top: 300});
+  assert.deepEqual(centerPicker({width: 1200, height: 900}, viewport), {left: 0, top: 0});
 });
 
 test("a picker without a trigger keeps its position when it is inside the viewport", () => {
